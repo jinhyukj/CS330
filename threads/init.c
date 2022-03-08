@@ -1,4 +1,5 @@
 //jinhyukjang
+//Only on jin_hyuk branch
 #include "threads/init.h"
 #include <console.h>
 #include <debug.h>
