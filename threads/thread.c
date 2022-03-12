@@ -229,7 +229,7 @@ tid_t thread_create(const char *name, int priority,
 		}
 	}
 	
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	return tid;
 }
@@ -273,7 +273,7 @@ bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB) {
 	} 
 }
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 
 void
@@ -284,17 +284,20 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
+	list_push_back (&ready_list, &t->elem);
 
 	/* Edited Code - Jinhyen Kim
-	   The original code, list_push_back, adds every unblocked threads to 
-	      the end of ready_list.
-	   We change the function to list_insert_ordered so that the unblocked
-	      threads are added in descending order of priority.
+	   For Priority Scheduling, we wish to have the thread with the highest
+	      priority to always be at the front of ready_list.
+	   However, the original code, list_push_back, adds every unblocked 
+	      threads to the end of ready_list instead.
+	   In order to maintain a descending hierarchy sort, we call the function
+	      list_sort every time a new thread is pushed at the end of ready_list.
 	   Note: We use threadPriorityCompare to sort by descending order. */
 
-	list_insert_ordered (&ready_list, &t->elem, threadPriorityCompare, 0);
+	list_sort (&ready_list, threadPriorityCompare, 0);
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	t->status = THREAD_READY;
 	intr_set_level(old_level);
@@ -360,9 +363,21 @@ void thread_yield(void)
 
 	old_level = intr_disable();
 	if (curr != idle_thread)
-		/* Edited Code - Jinhyen Kim */
-		list_insert_ordered (&ready_list, &curr->elem, threadPriorityCompare, 0);
-		/* Edited Code - Jinhyen Kim */
+		list_push_back (&ready_list, &curr->elem);
+
+		/* Edited Code - Jinhyen Kim
+	   	   For Priority Scheduling, we wish to have the thread with the highest
+	      	      priority to always be at the front of ready_list.
+	   	   However, the original code, list_push_back, adds every yielded
+	      	      threads to the end of ready_list instead.
+	   	   In order to maintain a descending hierarchy sort, we call the function
+	      	      list_sort every time a new thread is pushed at the end of ready_list.
+	   	   Note: We use threadPriorityCompare to sort by descending order. */
+
+		list_sort (&ready_list, threadPriorityCompare, 0);
+
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
+
 	do_schedule(THREAD_READY);
 	intr_set_level(old_level);
 }
@@ -430,7 +445,7 @@ void thread_set_priority(int new_priority)
 		}
 	}
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 }
 
 /* Returns the current thread's priority. */
@@ -740,4 +755,5 @@ void checkForThreadYield (void) {
 		}
 	}
 }
-/* Edited Code - Jinhyen Kim */
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */

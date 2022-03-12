@@ -58,7 +58,7 @@ sema_init (struct semaphore *sema, unsigned value) {
 
 bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB);
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 /* Edited Code - Jinhyen Kim
    This code checks the priority of the current thread
@@ -70,7 +70,7 @@ bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB);
 
 void checkForThreadYield (void);
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
@@ -89,17 +89,20 @@ sema_down (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	while (sema->value == 0) {
+		list_push_back (&sema->waiters, &thread_current ()->elem);
 
-		/* Edited Code - Jinhyen Kim 
-		   The original code, list_push_back, adds the thread to
-		      the end of waiters.
-		   We change the function to list_insert_ordered so that the
-		      thread is added in descending order of priority. 
-		   Note: We use threadPriorityCompare to sort by descending order. */
+		/* Edited Code - Jinhyen Kim
+	   	   For Priority Scheduling, we wish to have the thread with the highest
+	      	      priority to always be at the front of waiters.
+	   	   However, the original code, list_push_back, adds every waiting 
+	      	      threads to the end of waiters instead.
+	   	   In order to maintain a descending hierarchy sort, we call the function
+	      	      list_sort every time a new thread is pushed at the end of waiters.
+	   	   Note: We use threadPriorityCompare to sort by descending order. */
 
-		list_insert_ordered (&sema->waiters, &thread_current ()->elem, threadPriorityCompare, 0);
+		list_sort (&sema->waiters, threadPriorityCompare, 0);
 
-		/* Edited Code - Jinhyen Kim */
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 		thread_block ();
 	}
@@ -154,7 +157,7 @@ sema_up (struct semaphore *sema) {
 
 		list_sort (&sema->waiters, threadPriorityCompare, 0);
 
-		/* Edited Code - Jinhyen Kim */
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
@@ -174,7 +177,7 @@ sema_up (struct semaphore *sema) {
 
 		intr_set_level (old_level);
 
-		/* Edited Code - Jinhyen Kim */
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	}
 
@@ -188,7 +191,7 @@ sema_up (struct semaphore *sema) {
 		intr_set_level (old_level);
 	}
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 }
 
@@ -358,7 +361,7 @@ cond_init (struct condition *cond) {
 bool semaphorePriorityCompare (struct list_elem *sA, struct list_elem *sB) {
 
 	/* Currently, sA and sB is a pointer to a doubly linked list
-	   of semaphore_elem. 
+	      of semaphore_elem. 
 	   Inside the semaphore_elem is a semaphore.
 	   Inside the semaphore is the struct list waiters. 
 	   The first entry in waiters represent the priority of
@@ -375,7 +378,7 @@ bool semaphorePriorityCompare (struct list_elem *sA, struct list_elem *sB) {
 	}
 }
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 void
 cond_wait (struct condition *cond, struct lock *lock) {
@@ -387,17 +390,20 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	sema_init (&waiter.semaphore, 0);
+	list_push_back (&cond->waiters, &waiter.elem);
 
-	/* Edited Code - Jinhyen Kim 
-	   The original code, list_push_back, adds the semaphore
-	      to the end of waiters.
-	   We change the function to list_insert_ordered so that the
-	      semaphore is added in descending order of priority. 
-	   Note: We use semaphorePriorityCompare to sort by descending order. */
+	/* Edited Code - Jinhyen Kim
+	   For Priority Scheduling, we wish to have the thread with the highest
+      	      priority to always be at the front of waiters.
+   	   However, the original code, list_push_back, adds every unblocked 
+      	      thread to the end of waiters instead.
+   	   In order to maintain a descending hierarchy sort, we call the function
+      	      list_sort every time a new thread is pushed at the end of waiters.
+   	   Note: We use threadPriorityCompare to sort by descending order. */
 
-	list_insert_ordered (&cond->waiters, &waiter.elem, semaphorePriorityCompare, 0);
+	list_sort (&cond->waiters, threadPriorityCompare, 0);
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
@@ -429,7 +435,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 
 		list_sort (&cond->waiters, semaphorePriorityCompare, 0);
 
-		/* Edited Code - Jinhyen Kim */	
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
