@@ -415,6 +415,22 @@ void thread_wake(int64_t ticks)
 void thread_set_priority(int new_priority)
 {
 	thread_current()->priority = new_priority;
+
+	/* Edited Code - Jinhyen Kim
+	   This command could set the priority to be higher than
+	      the current running thread.
+	   To test this, we compare the priority of the first thread
+	      at ready_list and the current thread.
+	   If the thread at ready_list has a higher priority, we 
+	      call thread_yield. */
+	
+	if (!(list_empty (&ready_list))) {
+		if (((*(list_entry (list_front (&ready_list), struct thread, elem))).priority) > ((*(thread_current ())).priority)) {
+			thread_yield ();
+		}
+	}
+
+	/* Edited Code - Jinhyen Kim */
 }
 
 /* Returns the current thread's priority. */
