@@ -213,7 +213,23 @@ tid_t thread_create(const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 
 	/* Add to run queue. */
-	thread_unblock(t);
+	thread_unblock (t);
+	
+	/* Edited Code - Jinhyen Kim
+	   The newly created thread may have a higher priority than
+	      the currently running thread.
+	   To test this, we compare the priority of the first thread
+	      at ready_list and the current thread.
+	   If the thread at ready_list has a higher priority, we 
+	      call thread_yield. */
+
+	if (!(list_empty (&ready_list))) {
+		if (((*(list_entry (list_front (&ready_list), struct thread, elem))).priority) > ((*(thread_current ())).priority)) {
+			thread_yield ();
+		}
+	}
+	
+	/* Edited Code - Jinhyen Kim */
 
 	return tid;
 }
@@ -240,15 +256,46 @@ void thread_block(void)
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
-void thread_unblock(struct thread *t)
-{
+
+
+/* Edited Code - Jinhyen Kim
+   The following function takes two threads A and B as a list_elem.
+   If thread A has a higher priority than thread B, the function
+      returns True.
+   Otherwise, the function returns False. */
+
+bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB) {
+	if (((*(list_entry (tA, struct thread, elem))).priority) > ((*(list_entry (tB, struct thread, elem))).priority)) {
+		return true;
+	}
+	else {
+		return false;
+	} 
+}
+
+/* Edited Code - Jinhyen Kim */
+
+
+void
+thread_unblock (struct thread *t) {
 	enum intr_level old_level;
 
 	ASSERT(is_thread(t));
 
-	old_level = intr_disable();
-	ASSERT(t->status == THREAD_BLOCKED);
-	list_push_back(&ready_list, &t->elem);
+	old_level = intr_disable ();
+	ASSERT (t->status == THREAD_BLOCKED);
+
+	/* Edited Code - Jinhyen Kim
+	   The original code, list_push_back, adds every unblocked threads to 
+	      the end of ready_list.
+	   We change the function to list_insert_ordered so that the unblocked
+	      threads are added in descending order of priority.
+	   Note: We use threadPriorityCompare to sort by descending order. */
+
+	list_insert_ordered (&ready_list, &t->elem, threadPriorityCompare, 0);
+
+	/* Edited Code - Jinhyen Kim */
+
 	t->status = THREAD_READY;
 	intr_set_level(old_level);
 }
@@ -313,7 +360,9 @@ void thread_yield(void)
 
 	old_level = intr_disable();
 	if (curr != idle_thread)
-		list_push_back(&ready_list, &curr->elem);
+		/* Edited Code - Jinhyen Kim */
+		list_insert_ordered (&ready_list, &curr->elem, threadPriorityCompare, 0);
+		/* Edited Code - Jinhyen Kim */
 	do_schedule(THREAD_READY);
 	intr_set_level(old_level);
 }
@@ -659,3 +708,20 @@ allocate_tid(void)
 
 	return tid;
 }
+
+/* Edited Code - Jinhyen Kim 
+   This code checks the priority of the current thread
+      and the highest-priority thread at ready_list.
+   If the thread at ready_list has a higher priority,
+      thread_yield is executed.
+   This function exists solely so that we can access
+      the static ready_list from other files. */
+
+void checkForThreadYield (void) {
+	if (!(list_empty (&ready_list))) {
+		if (((*(list_entry (list_front (&ready_list), struct thread, elem))).priority) > ((*(thread_current ())).priority)) {
+			thread_yield ();
+		}
+	}
+}
+/* Edited Code - Jinhyen Kim */
