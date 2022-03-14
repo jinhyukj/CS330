@@ -72,6 +72,17 @@ void checkForThreadYield (void);
 
 /* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
+/* Edited Code - Jinhyen Kim
+   The following function is identical to the above function
+      threadPriorityCompare.
+   The only difference is that the sort takes place over
+      the list_elem priorityDonorsElement instead of elem.
+   Note: The function is only declared; it is defined in thread.c */
+
+bool threadDonorsPriorityCompare (struct list_elem *tA, struct list_elem *tB);
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
 
@@ -267,9 +278,72 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	/* Edited Code - Jinhyen Kim
+	   A thread attempting to acquire a lock may find out that another
+	      thread with a lower priority is holding the lock.
+	   We add an if statement to test this. If true, we:
+	      1. Add current thread to the lock holder's list priorityDonors
+	      2. Sort the list priorityDonors
+	      3. Have the current thread's pointer targetLock to point to the lock
+	      4. Run priorityDonate */
+
+	if (((*lock).holder) != NULL) {
+		if (((*(thread_current ())).priority) > ((*((*lock).holder)).priority)) {
+			list_push_back ((&((*((*lock).holder)).priorityDonors)), &((*(thread_current ())).priorityDonorsElement));
+
+			list_sort ((&((*((*lock).holder)).priorityDonors)), threadDonorsPriorityCompare, 0);
+
+			(*(thread_current ())).targetLock = lock;
+
+			priorityDonate ();
+		}
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
+
+/* Edited Code - Jinhyen Kim
+   The following function starts from the current thread and finds
+      what thread to donate priority to by tracking down what lock
+      the current thread is waiting on, and then tracking down what
+      thread is owning that lock.
+   Once the thread is located, we donate the priority then run the
+      function checkForHigherPriority to see whether the donated 
+      priority is higher than the base priority of the thread.
+   Note: We perform this until we encounter a thread that is not
+      waiting on a lock to implement nested priority donation. */	
+
+void priorityDonate (void) {
+	struct thread *targetThread;
+	targetThread = thread_current ();
+	while (((*(targetThread)).targetLock) != NULL) {
+		(*((*((*(targetThread)).targetLock)).holder)).priorityDonated = (*(targetThread)).priority;
+		targetThread = (*((*(targetThread)).targetLock)).holder;
+		checkForHigherPriority (targetThread);
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+
+/* Edited Code - Jinhyen Kim
+   The following function takes a thread and compares its base priority
+      priorityBase and the donated priority priorityDonated. 
+   It then sets the thread's priority as the higher of the two. */
+
+void checkForHigherPriority (struct thread *targetThread) {
+	if (((*(targetThread)).priorityBase) > ((*(targetThread)).priorityDonated)) {
+		(*(targetThread)).priority = (*(targetThread)).priorityBase;
+	}
+	else {
+		(*(targetThread)).priority = (*(targetThread)).priorityDonated;
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+
 
 /* Tries to acquires LOCK and returns true if successful or false
    on failure.  The lock must not already be held by the current
@@ -300,6 +374,51 @@ void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
+
+	/* Edited Code - Jinhyen Kim
+	   Before we set the lock's holder as NULL, we need to revert any 
+	      priority donations.
+	   We can check whether there was a priority donationn by iterating
+	      through priorityDonors and checking if any of the donor threads
+	      were waiting on the lock.
+	   If we find the donor thread, we need to remove that thread from
+	      priorityDonors and revert the donated priority. */
+
+	struct list_elem *temp;
+	temp = list_begin (&((*(thread_current ())).priorityDonors));
+
+	while (temp != (list_end (&((*(thread_current ())).priorityDonors)))) {
+		if ((*(list_entry (temp, struct thread, priorityDonorsElement))).targetLock == lock) {
+			list_remove (&((*(list_entry (temp, struct thread, priorityDonorsElement))).priorityDonorsElement));
+		}
+		temp = list_next (temp);
+	}
+
+	if ((*(list_entry (temp, struct thread, priorityDonorsElement))).targetLock == lock) {
+		list_remove (&((*(list_entry (temp, struct thread, priorityDonorsElement))).priorityDonorsElement));
+	}
+
+	/* If there is no threads at priorityDonors, we can simply set 
+	      both priorityDonated and priority to be the base value. 
+	   Otherwise, the priority is set to be the highest priority 
+	      amongst the remaining threads at priorityDonors. */
+
+	if (list_empty (&((*(thread_current ())).priorityDonors))) {
+		(*(thread_current ())).priorityDonated = (*(thread_current ())).priorityBase;
+		(*(thread_current ())).priority = (*(thread_current ())).priorityBase;
+		checkForHigherPriority (thread_current ());
+	}
+	else {
+		list_sort (&((*(thread_current ())).priorityDonors), threadDonorsPriorityCompare, 0);
+
+		(*(thread_current ())).priorityDonated = (*(list_entry (list_front (&((*(thread_current ())).priorityDonors)), struct thread, priorityDonorsElement))).priority;
+
+		checkForHigherPriority (thread_current ());
+	}	
+
+		
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);

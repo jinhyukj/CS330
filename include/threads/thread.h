@@ -101,6 +101,42 @@ struct thread
 	by Jin-Hyuk Jang(project 1 - alarm clock)*/
 	int64_t wake_tick; /* "tick" to wake up to */
 
+	/* Edited Code - Jinhyen Kim
+	   A thread has its own priority value, but it can also receive
+	      a priority donation from a thread with a different priority.
+	   We add two elements priorityBase and priorityDonated to store
+	      these two values. 
+	   Note: priority = max (priorityBase, priorityDonated) */
+
+	int priorityBase;
+	int priorityDonated;
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+
+	/* Edited Code - Jinhyen Kim
+	   A thread may receive multiple donations, of which only the thread
+	      with the highest priority effectively matters.
+	   In order to keep track of all the donating threads, we add a list 
+	      priorityDonors and a list_elem priorityDonorsElement. 
+	   Note: To find the highest priority, we can simply sort priorityDonors. */
+
+	struct list priorityDonors;
+	struct list_elem priorityDonorsElement;
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+
+	/* Edited Code - Jinhyen Kim
+	   To implement Nested Priority Donation, we need a way to learn what lock
+	      each thread is waiting on, as well as what thread each lock is being 
+	      held by.
+	   Although each lock stores their holder, the threads does not store any
+	      information about what lock they are waiting on.
+	   We add a new element targetLock, a lock pointer, to store this information. */
+
+	struct lock *targetLock;
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */
