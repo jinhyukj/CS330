@@ -58,7 +58,7 @@ sema_init (struct semaphore *sema, unsigned value) {
 
 bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB);
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 /* Edited Code - Jinhyen Kim
    This code checks the priority of the current thread
@@ -70,7 +70,18 @@ bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB);
 
 void checkForThreadYield (void);
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
+
+/* Edited Code - Jinhyen Kim
+   The following function is identical to the above function
+      threadPriorityCompare.
+   The only difference is that the sort takes place over
+      the list_elem priorityDonorsElement instead of elem.
+   Note: The function is only declared; it is defined in thread.c */
+
+bool threadDonorsPriorityCompare (struct list_elem *tA, struct list_elem *tB);
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
@@ -89,17 +100,20 @@ sema_down (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	while (sema->value == 0) {
+		list_push_back (&sema->waiters, &thread_current ()->elem);
 
-		/* Edited Code - Jinhyen Kim 
-		   The original code, list_push_back, adds the thread to
-		      the end of waiters.
-		   We change the function to list_insert_ordered so that the
-		      thread is added in descending order of priority. 
-		   Note: We use threadPriorityCompare to sort by descending order. */
+		/* Edited Code - Jinhyen Kim
+	   	   For Priority Scheduling, we wish to have the thread with the highest
+	      	      priority to always be at the front of waiters.
+	   	   However, the original code, list_push_back, adds every waiting 
+	      	      threads to the end of waiters instead.
+	   	   In order to maintain a descending hierarchy sort, we call the function
+	      	      list_sort every time a new thread is pushed at the end of waiters.
+	   	   Note: We use threadPriorityCompare to sort by descending order. */
 
-		list_insert_ordered (&sema->waiters, &thread_current ()->elem, threadPriorityCompare, 0);
+		list_sort (&sema->waiters, threadPriorityCompare, 0);
 
-		/* Edited Code - Jinhyen Kim */
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 		thread_block ();
 	}
@@ -154,7 +168,7 @@ sema_up (struct semaphore *sema) {
 
 		list_sort (&sema->waiters, threadPriorityCompare, 0);
 
-		/* Edited Code - Jinhyen Kim */
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
@@ -174,7 +188,7 @@ sema_up (struct semaphore *sema) {
 
 		intr_set_level (old_level);
 
-		/* Edited Code - Jinhyen Kim */
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	}
 
@@ -188,7 +202,7 @@ sema_up (struct semaphore *sema) {
 		intr_set_level (old_level);
 	}
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 }
 
@@ -264,9 +278,72 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	/* Edited Code - Jinhyen Kim
+	   A thread attempting to acquire a lock may find out that another
+	      thread with a lower priority is holding the lock.
+	   We add an if statement to test this. If true, we:
+	      1. Add current thread to the lock holder's list priorityDonors
+	      2. Sort the list priorityDonors
+	      3. Have the current thread's pointer targetLock to point to the lock
+	      4. Run priorityDonate */
+
+	if (((*lock).holder) != NULL) {
+		if (((*(thread_current ())).priority) > ((*((*lock).holder)).priority)) {
+			list_push_back ((&((*((*lock).holder)).priorityDonors)), &((*(thread_current ())).priorityDonorsElement));
+
+			list_sort ((&((*((*lock).holder)).priorityDonors)), threadDonorsPriorityCompare, 0);
+
+			(*(thread_current ())).targetLock = lock;
+
+			priorityDonate ();
+		}
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
+
+/* Edited Code - Jinhyen Kim
+   The following function starts from the current thread and finds
+      what thread to donate priority to by tracking down what lock
+      the current thread is waiting on, and then tracking down what
+      thread is owning that lock.
+   Once the thread is located, we donate the priority then run the
+      function checkForHigherPriority to see whether the donated 
+      priority is higher than the base priority of the thread.
+   Note: We perform this until we encounter a thread that is not
+      waiting on a lock to implement nested priority donation. */	
+
+void priorityDonate (void) {
+	struct thread *targetThread;
+	targetThread = thread_current ();
+	while (((*(targetThread)).targetLock) != NULL) {
+		(*((*((*(targetThread)).targetLock)).holder)).priorityDonated = (*(targetThread)).priority;
+		targetThread = (*((*(targetThread)).targetLock)).holder;
+		checkForHigherPriority (targetThread);
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+
+/* Edited Code - Jinhyen Kim
+   The following function takes a thread and compares its base priority
+      priorityBase and the donated priority priorityDonated. 
+   It then sets the thread's priority as the higher of the two. */
+
+void checkForHigherPriority (struct thread *targetThread) {
+	if (((*(targetThread)).priorityBase) > ((*(targetThread)).priorityDonated)) {
+		(*(targetThread)).priority = (*(targetThread)).priorityBase;
+	}
+	else {
+		(*(targetThread)).priority = (*(targetThread)).priorityDonated;
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+
 
 /* Tries to acquires LOCK and returns true if successful or false
    on failure.  The lock must not already be held by the current
@@ -297,6 +374,51 @@ void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
+
+	/* Edited Code - Jinhyen Kim
+	   Before we set the lock's holder as NULL, we need to revert any 
+	      priority donations.
+	   We can check whether there was a priority donationn by iterating
+	      through priorityDonors and checking if any of the donor threads
+	      were waiting on the lock.
+	   If we find the donor thread, we need to remove that thread from
+	      priorityDonors and revert the donated priority. */
+
+	struct list_elem *temp;
+	temp = list_begin (&((*(thread_current ())).priorityDonors));
+
+	while (temp != (list_end (&((*(thread_current ())).priorityDonors)))) {
+		if ((*(list_entry (temp, struct thread, priorityDonorsElement))).targetLock == lock) {
+			list_remove (&((*(list_entry (temp, struct thread, priorityDonorsElement))).priorityDonorsElement));
+		}
+		temp = list_next (temp);
+	}
+
+	if ((*(list_entry (temp, struct thread, priorityDonorsElement))).targetLock == lock) {
+		list_remove (&((*(list_entry (temp, struct thread, priorityDonorsElement))).priorityDonorsElement));
+	}
+
+	/* If there is no threads at priorityDonors, we can simply set 
+	      both priorityDonated and priority to be the base value. 
+	   Otherwise, the priority is set to be the highest priority 
+	      amongst the remaining threads at priorityDonors. */
+
+	if (list_empty (&((*(thread_current ())).priorityDonors))) {
+		(*(thread_current ())).priorityDonated = (*(thread_current ())).priorityBase;
+		(*(thread_current ())).priority = (*(thread_current ())).priorityBase;
+		checkForHigherPriority (thread_current ());
+	}
+	else {
+		list_sort (&((*(thread_current ())).priorityDonors), threadDonorsPriorityCompare, 0);
+
+		(*(thread_current ())).priorityDonated = (*(list_entry (list_front (&((*(thread_current ())).priorityDonors)), struct thread, priorityDonorsElement))).priority;
+
+		checkForHigherPriority (thread_current ());
+	}	
+
+		
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
@@ -358,7 +480,7 @@ cond_init (struct condition *cond) {
 bool semaphorePriorityCompare (struct list_elem *sA, struct list_elem *sB) {
 
 	/* Currently, sA and sB is a pointer to a doubly linked list
-	   of semaphore_elem. 
+	      of semaphore_elem. 
 	   Inside the semaphore_elem is a semaphore.
 	   Inside the semaphore is the struct list waiters. 
 	   The first entry in waiters represent the priority of
@@ -375,7 +497,7 @@ bool semaphorePriorityCompare (struct list_elem *sA, struct list_elem *sB) {
 	}
 }
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 void
 cond_wait (struct condition *cond, struct lock *lock) {
@@ -387,17 +509,20 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	sema_init (&waiter.semaphore, 0);
+	list_push_back (&cond->waiters, &waiter.elem);
 
-	/* Edited Code - Jinhyen Kim 
-	   The original code, list_push_back, adds the semaphore
-	      to the end of waiters.
-	   We change the function to list_insert_ordered so that the
-	      semaphore is added in descending order of priority. 
-	   Note: We use semaphorePriorityCompare to sort by descending order. */
+	/* Edited Code - Jinhyen Kim
+	   For Priority Scheduling, we wish to have the thread with the highest
+      	      priority to always be at the front of waiters.
+   	   However, the original code, list_push_back, adds every unblocked 
+      	      thread to the end of waiters instead.
+   	   In order to maintain a descending hierarchy sort, we call the function
+      	      list_sort every time a new thread is pushed at the end of waiters.
+   	   Note: We use threadPriorityCompare to sort by descending order. */
 
-	list_insert_ordered (&cond->waiters, &waiter.elem, semaphorePriorityCompare, 0);
+	list_sort (&cond->waiters, threadPriorityCompare, 0);
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
@@ -429,7 +554,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 
 		list_sort (&cond->waiters, semaphorePriorityCompare, 0);
 
-		/* Edited Code - Jinhyen Kim */	
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);

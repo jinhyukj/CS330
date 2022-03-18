@@ -229,7 +229,7 @@ tid_t thread_create(const char *name, int priority,
 		}
 	}
 	
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	return tid;
 }
@@ -273,7 +273,24 @@ bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB) {
 	} 
 }
 
-/* Edited Code - Jinhyen Kim */
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
+
+/* Edited Code - Jinhyen Kim
+   The following function is identical to the above function
+      threadPriorityCompare.
+   The only difference is that the sort takes place over
+      the list_elem priorityDonorsElement instead of elem. */
+
+bool threadDonorsPriorityCompare (struct list_elem *tA, struct list_elem *tB) {
+	if (((*(list_entry (tA, struct thread, priorityDonorsElement))).priority) > ((*(list_entry (tB, struct thread, priorityDonorsElement))).priority)) {
+		return true;
+	}
+	else {
+		return false;
+	} 
+}
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
 
 void
@@ -284,17 +301,20 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
+	list_push_back (&ready_list, &t->elem);
 
 	/* Edited Code - Jinhyen Kim
-	   The original code, list_push_back, adds every unblocked threads to 
-	      the end of ready_list.
-	   We change the function to list_insert_ordered so that the unblocked
-	      threads are added in descending order of priority.
+	   For Priority Scheduling, we wish to have the thread with the highest
+	      priority to always be at the front of ready_list.
+	   However, the original code, list_push_back, adds every unblocked 
+	      threads to the end of ready_list instead.
+	   In order to maintain a descending hierarchy sort, we call the function
+	      list_sort every time a new thread is pushed at the end of ready_list.
 	   Note: We use threadPriorityCompare to sort by descending order. */
 
-	list_insert_ordered (&ready_list, &t->elem, threadPriorityCompare, 0);
+	list_sort (&ready_list, threadPriorityCompare, 0);
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	t->status = THREAD_READY;
 	intr_set_level(old_level);
@@ -360,9 +380,21 @@ void thread_yield(void)
 
 	old_level = intr_disable();
 	if (curr != idle_thread)
-		/* Edited Code - Jinhyen Kim */
-		list_insert_ordered (&ready_list, &curr->elem, threadPriorityCompare, 0);
-		/* Edited Code - Jinhyen Kim */
+		list_push_back (&ready_list, &curr->elem);
+
+		/* Edited Code - Jinhyen Kim
+	   	   For Priority Scheduling, we wish to have the thread with the highest
+	      	      priority to always be at the front of ready_list.
+	   	   However, the original code, list_push_back, adds every yielded
+	      	      threads to the end of ready_list instead.
+	   	   In order to maintain a descending hierarchy sort, we call the function
+	      	      list_sort every time a new thread is pushed at the end of ready_list.
+	   	   Note: We use threadPriorityCompare to sort by descending order. */
+
+		list_sort (&ready_list, threadPriorityCompare, 0);
+
+		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
+
 	do_schedule(THREAD_READY);
 	intr_set_level(old_level);
 }
@@ -411,10 +443,40 @@ void thread_wake(int64_t ticks)
 	}
 }
 
+/* Edited Code - Jinhyen Kim
+   The following function takes a thread and compares its base priority
+      priorityBase and the donated priority priorityDonated. 
+   It then sets the thread's priority as the higher of the two. 
+   Note: The code is only declared; It is defined in synch.c */	
+
+void checkForHigherPriority (struct thread *targetThread);
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority(int new_priority)
 {
-	thread_current()->priority = new_priority;
+
+	/* Edited Code - Jinhyen Kim
+	   A thread that has received priority donation could have its own
+	      base priority be changed into a higher value than the donated
+	      priority.
+	   Because of this, we need to compare priority. */
+
+	(*(thread_current ())).priorityBase = new_priority;
+
+	/* If the priorityDonors list is empty, then we can change the
+	      value of priorityDonated as new_priority as well. 
+	   If not, then we cannot change the value of priorityDonated
+	      as there is still a thread donating its own priority. */
+
+	if (list_empty (&((*(thread_current ())).priorityDonors))) {
+		(*(thread_current ())).priorityDonated = new_priority;
+	}
+
+	checkForHigherPriority (thread_current ());		
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
 
 	/* Edited Code - Jinhyen Kim
 	   This command could set the priority to be higher than
@@ -430,7 +492,7 @@ void thread_set_priority(int new_priority)
 		}
 	}
 
-	/* Edited Code - Jinhyen Kim */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 }
 
 /* Returns the current thread's priority. */
@@ -533,6 +595,34 @@ init_thread(struct thread *t, const char *name, int priority)
 	strlcpy(t->name, name, sizeof t->name);
 	t->tf.rsp = (uint64_t)t + PGSIZE - sizeof(void *);
 	t->priority = priority;
+
+	/* Edited Code - Jinhyen Kim
+	   priorityBase - The base priority value of the thread 
+	   priorityDonated - The priority value donated to the thread (if any) 
+	   Note: Initially, priorityDonated and priorityBase = priority */
+
+	(*t).priorityBase = priority;
+	(*t).priorityDonated = priority;
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+	
+	/* Edited Code - Jinhyen Kim
+	   priorityDonors - The list of all the threads donating priority
+	   To create this list, we run list_init. */
+	
+	list_init (&((*t).priorityDonors));	
+	
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+
+	/* Edited Code - Jinhyen Kim
+	   targetLock - The pointer that points to the lock that the thread
+	      is waiting on, if any.
+	   Note: Initially, targetLock points to NULL. */
+	
+	(*t).targetLock = NULL;	
+	
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+	
 	t->magic = THREAD_MAGIC;
 }
 
@@ -740,4 +830,5 @@ void checkForThreadYield (void) {
 		}
 	}
 }
-/* Edited Code - Jinhyen Kim */
+
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
