@@ -1,0 +1,93 @@
+FAIL
+Some recent_cpu values were missing or differed from those expected by more than 2.5.
+  time   actual <-> expected explanation
+------ -------- --- -------- ----------------------------------------
+     2   200.00 >>> 6.40     Too big, by 191.10.
+     4   400.00 >>> 12.60    Too big, by 384.90.
+     6   600.00 >>> 18.61    Too big, by 578.89.
+     8   800.00 >>> 24.44    Too big, by 773.06.
+    10  1000.00 >>> 30.08    Too big, by 967.42.
+    12  1200.00 >>> 35.54    Too big, by 1161.96.
+    14    undef     40.83    Missing value.
+    16    undef     45.96    Missing value.
+    18    undef     50.92    Missing value.
+    20    undef     55.73    Missing value.
+    22    undef     60.39    Missing value.
+    24    undef     64.90    Missing value.
+    26    undef     69.27    Missing value.
+    28   178.56 >>> 73.50    Too big, by 102.56.
+    30   378.56 >>> 77.60    Too big, by 298.46.
+    32   578.56 >>> 81.56    Too big, by 494.50.
+    34   778.56 >>> 85.40    Too big, by 690.66.
+    36   978.56 >>> 89.12    Too big, by 886.94.
+    38  1178.56 >>> 92.72    Too big, by 1083.34.
+    40    undef     96.20    Missing value.
+    42    undef     99.57    Missing value.
+    44    undef     102.84   Missing value.
+    46    undef     106.00   Missing value.
+    48    undef     109.06   Missing value.
+    50    undef     112.02   Missing value.
+    52    undef     114.89   Missing value.
+    54   157.12 >>> 117.66   Too big, by 36.96.
+    56   357.12 >>> 120.34   Too big, by 234.28.
+    58   557.12 >>> 122.94   Too big, by 431.68.
+    60   757.12 >>> 125.46   Too big, by 629.16.
+    62   957.12 >>> 127.89   Too big, by 826.73.
+    64  1157.12 >>> 130.25   Too big, by 1024.37.
+    66    undef     132.53   Missing value.
+    68    undef     134.73   Missing value.
+    70    undef     136.86   Missing value.
+    72    undef     138.93   Missing value.
+    74    undef     140.93   Missing value.
+    76    undef     142.86   Missing value.
+    78    undef     144.73   Missing value.
+    80   135.68 <<< 146.54   Too small, by 8.36.
+    82   335.68 >>> 148.29   Too big, by 184.89.
+    84   535.68 >>> 149.99   Too big, by 383.19.
+    86   735.68 >>> 151.63   Too big, by 581.55.
+    88   935.68 >>> 153.21   Too big, by 779.97.
+    90  1135.68 >>> 154.75   Too big, by 978.43.
+    92    undef     156.23   Missing value.
+    94    undef     157.67   Missing value.
+    96    undef     159.06   Missing value.
+    98    undef     160.40   Missing value.
+   100    undef     161.70   Missing value.
+   102    undef     162.96   Missing value.
+   104    undef     164.18   Missing value.
+   106   114.24 <<< 165.35   Too small, by 48.61.
+   108   314.24 >>> 166.49   Too big, by 145.25.
+   110   514.24 >>> 167.59   Too big, by 344.15.
+   112   714.24 >>> 168.66   Too big, by 543.08.
+   114   914.24 >>> 169.69   Too big, by 742.05.
+   116  1114.24 >>> 170.69   Too big, by 941.05.
+   118    undef     171.65   Missing value.
+   120    undef     172.58   Missing value.
+   122    undef     173.49   Missing value.
+   124    undef     174.36   Missing value.
+   126    undef     175.20   Missing value.
+   128    undef     176.02   Missing value.
+   130    undef     176.81   Missing value.
+   132    92.80 <<< 177.57   Too small, by 82.27.
+   134   292.80 >>> 178.31   Too big, by 111.99.
+   136   492.80 >>> 179.02   Too big, by 311.28.
+   138   692.80 >>> 179.72   Too big, by 510.58.
+   140   892.80 >>> 180.38   Too big, by 709.92.
+   142  1092.80 >>> 181.03   Too big, by 909.27.
+   144  1292.80 >>> 181.65   Too big, by 1108.65.
+   146    undef     182.26   Missing value.
+   148    undef     182.84   Missing value.
+   150    undef     183.41   Missing value.
+   152    undef     183.96   Missing value.
+   154    undef     184.49   Missing value.
+   156    undef     185.00   Missing value.
+   158    71.36 <<< 185.49   Too small, by 111.63.
+   160   271.36 >>> 185.97   Too big, by 82.89.
+   162   471.36 >>> 186.43   Too big, by 282.43.
+   164   671.36 >>> 186.88   Too big, by 481.98.
+   166   871.36 >>> 187.31   Too big, by 681.55.
+   168  1071.36 >>> 187.73   Too big, by 881.13.
+   170  1271.36 >>> 188.14   Too big, by 1080.72.
+   172    undef     188.53   Missing value.
+   174    undef     188.91   Missing value.
+   176    undef     189.27   Missing value.
+   178    undef     189.63   Missing value.

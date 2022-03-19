@@ -11,6 +11,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "threads/fp-arithmetic.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -23,6 +24,11 @@
 /* Random value for basic thread
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
+
+/*Edited by Jin-Hyuk Jang
+"load_avg" is a global variable that shows how many threads are competing to run*/
+int load_avg;
+/*Edited by Jin-Hyuk Jang(project 1 - advanced scheduler)*/
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -134,6 +140,11 @@ void thread_start(void)
 	sema_init(&idle_started, 0);
 	thread_create("idle", PRI_MIN, idle, &idle_started);
 
+	/*Edited by Jin-Hyuk Jang
+	We set the "load_avg" value to default(LOAD_AVG_DEFAULT)*/
+	load_avg = LOAD_AVG_DEFAULT;
+	/*Edited by Jin-Hyuk Jang (project 1 - advanced scheduling)*/
+
 	/* Start preemptive thread scheduling. */
 	intr_enable();
 
@@ -213,22 +224,24 @@ tid_t thread_create(const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 
 	/* Add to run queue. */
-	thread_unblock (t);
-	
+	thread_unblock(t);
+
 	/* Edited Code - Jinhyen Kim
 	   The newly created thread may have a higher priority than
-	      the currently running thread.
+		  the currently running thread.
 	   To test this, we compare the priority of the first thread
-	      at ready_list and the current thread.
-	   If the thread at ready_list has a higher priority, we 
-	      call thread_yield. */
+		  at ready_list and the current thread.
+	   If the thread at ready_list has a higher priority, we
+		  call thread_yield. */
 
-	if (!(list_empty (&ready_list))) {
-		if (((*(list_entry (list_front (&ready_list), struct thread, elem))).priority) > ((*(thread_current ())).priority)) {
-			thread_yield ();
+	if (!(list_empty(&ready_list)))
+	{
+		if (((*(list_entry(list_front(&ready_list), struct thread, elem))).priority) > ((*(thread_current())).priority))
+		{
+			thread_yield();
 		}
 	}
-	
+
 	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	return tid;
@@ -257,62 +270,66 @@ void thread_block(void)
    it may expect that it can atomically unblock a thread and
    update other data. */
 
-
 /* Edited Code - Jinhyen Kim
    The following function takes two threads A and B as a list_elem.
    If thread A has a higher priority than thread B, the function
-      returns True.
+	  returns True.
    Otherwise, the function returns False. */
 
-bool threadPriorityCompare (struct list_elem *tA, struct list_elem *tB) {
-	if (((*(list_entry (tA, struct thread, elem))).priority) > ((*(list_entry (tB, struct thread, elem))).priority)) {
+bool threadPriorityCompare(struct list_elem *tA, struct list_elem *tB)
+{
+	if (((*(list_entry(tA, struct thread, elem))).priority) > ((*(list_entry(tB, struct thread, elem))).priority))
+	{
 		return true;
 	}
-	else {
+	else
+	{
 		return false;
-	} 
+	}
 }
 
 /* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 /* Edited Code - Jinhyen Kim
    The following function is identical to the above function
-      threadPriorityCompare.
+	  threadPriorityCompare.
    The only difference is that the sort takes place over
-      the list_elem priorityDonorsElement instead of elem. */
+	  the list_elem priorityDonorsElement instead of elem. */
 
-bool threadDonorsPriorityCompare (struct list_elem *tA, struct list_elem *tB) {
-	if (((*(list_entry (tA, struct thread, priorityDonorsElement))).priority) > ((*(list_entry (tB, struct thread, priorityDonorsElement))).priority)) {
+bool threadDonorsPriorityCompare(struct list_elem *tA, struct list_elem *tB)
+{
+	if (((*(list_entry(tA, struct thread, priorityDonorsElement))).priority) > ((*(list_entry(tB, struct thread, priorityDonorsElement))).priority))
+	{
 		return true;
 	}
-	else {
+	else
+	{
 		return false;
-	} 
+	}
 }
 
 /* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
-
-void
-thread_unblock (struct thread *t) {
+void thread_unblock(struct thread *t)
+{
 	enum intr_level old_level;
 
 	ASSERT(is_thread(t));
 
-	old_level = intr_disable ();
-	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	old_level = intr_disable();
+	ASSERT(t->status == THREAD_BLOCKED);
+	list_push_back(&ready_list, &t->elem);
 
 	/* Edited Code - Jinhyen Kim
 	   For Priority Scheduling, we wish to have the thread with the highest
-	      priority to always be at the front of ready_list.
-	   However, the original code, list_push_back, adds every unblocked 
-	      threads to the end of ready_list instead.
+		  priority to always be at the front of ready_list.
+	   However, the original code, list_push_back, adds every unblocked
+		  threads to the end of ready_list instead.
 	   In order to maintain a descending hierarchy sort, we call the function
-	      list_sort every time a new thread is pushed at the end of ready_list.
+		  list_sort every time a new thread is pushed at the end of ready_list.
 	   Note: We use threadPriorityCompare to sort by descending order. */
 
-	list_sort (&ready_list, threadPriorityCompare, 0);
+	list_sort(&ready_list, threadPriorityCompare, 0);
 
 	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
@@ -380,20 +397,20 @@ void thread_yield(void)
 
 	old_level = intr_disable();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		list_push_back(&ready_list, &curr->elem);
 
-		/* Edited Code - Jinhyen Kim
-	   	   For Priority Scheduling, we wish to have the thread with the highest
-	      	      priority to always be at the front of ready_list.
-	   	   However, the original code, list_push_back, adds every yielded
-	      	      threads to the end of ready_list instead.
-	   	   In order to maintain a descending hierarchy sort, we call the function
-	      	      list_sort every time a new thread is pushed at the end of ready_list.
-	   	   Note: We use threadPriorityCompare to sort by descending order. */
+	/* Edited Code - Jinhyen Kim
+	   For Priority Scheduling, we wish to have the thread with the highest
+			  priority to always be at the front of ready_list.
+	   However, the original code, list_push_back, adds every yielded
+			  threads to the end of ready_list instead.
+	   In order to maintain a descending hierarchy sort, we call the function
+			  list_sort every time a new thread is pushed at the end of ready_list.
+	   Note: We use threadPriorityCompare to sort by descending order. */
 
-		list_sort (&ready_list, threadPriorityCompare, 0);
+	list_sort(&ready_list, threadPriorityCompare, 0);
 
-		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
 
 	do_schedule(THREAD_READY);
 	intr_set_level(old_level);
@@ -445,13 +462,13 @@ void thread_wake(int64_t ticks)
 
 /* Edited Code - Jinhyen Kim
    The following function takes a thread and compares its base priority
-      priorityBase and the donated priority priorityDonated. 
-   It then sets the thread's priority as the higher of the two. 
-   Note: The code is only declared; It is defined in synch.c */	
+	  priorityBase and the donated priority priorityDonated.
+   It then sets the thread's priority as the higher of the two.
+   Note: The code is only declared; It is defined in synch.c */
 
-void checkForHigherPriority (struct thread *targetThread);
+void checkForHigherPriority(struct thread *targetThread);
 
-/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority(int new_priority)
@@ -459,36 +476,39 @@ void thread_set_priority(int new_priority)
 
 	/* Edited Code - Jinhyen Kim
 	   A thread that has received priority donation could have its own
-	      base priority be changed into a higher value than the donated
-	      priority.
+		  base priority be changed into a higher value than the donated
+		  priority.
 	   Because of this, we need to compare priority. */
 
-	(*(thread_current ())).priorityBase = new_priority;
+	(*(thread_current())).priorityBase = new_priority;
 
 	/* If the priorityDonors list is empty, then we can change the
-	      value of priorityDonated as new_priority as well. 
+		  value of priorityDonated as new_priority as well.
 	   If not, then we cannot change the value of priorityDonated
-	      as there is still a thread donating its own priority. */
+		  as there is still a thread donating its own priority. */
 
-	if (list_empty (&((*(thread_current ())).priorityDonors))) {
-		(*(thread_current ())).priorityDonated = new_priority;
+	if (list_empty(&((*(thread_current())).priorityDonors)))
+	{
+		(*(thread_current())).priorityDonated = new_priority;
 	}
 
-	checkForHigherPriority (thread_current ());		
+	checkForHigherPriority(thread_current());
 
-	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
 	/* Edited Code - Jinhyen Kim
 	   This command could set the priority to be higher than
-	      the current running thread.
+		  the current running thread.
 	   To test this, we compare the priority of the first thread
-	      at ready_list and the current thread.
-	   If the thread at ready_list has a higher priority, we 
-	      call thread_yield. */
-	
-	if (!(list_empty (&ready_list))) {
-		if (((*(list_entry (list_front (&ready_list), struct thread, elem))).priority) > ((*(thread_current ())).priority)) {
-			thread_yield ();
+		  at ready_list and the current thread.
+	   If the thread at ready_list has a higher priority, we
+		  call thread_yield. */
+
+	if (!(list_empty(&ready_list)))
+	{
+		if (((*(list_entry(list_front(&ready_list), struct thread, elem))).priority) > ((*(thread_current())).priority))
+		{
+			thread_yield();
 		}
 	}
 
@@ -501,31 +521,141 @@ int thread_get_priority(void)
 	return thread_current()->priority;
 }
 
+/*Edited by Jin-Hyuk Jang
+We need a function that calculates priority according to mlfqs scheduler*/
+void calculate_priority(struct thread *t)
+{
+	if (t != idle_thread)
+		t->priority = fti(subif(PRI_MAX, addif(divif(t->recent_cpu, 4), t->nice * 2)));
+}
+/*Edited by Jin-Hyuk Jang (project 1 - advanced scheduler)*/
+
+/*Edited by Jin-Hyuk Jang
+We need a function that calculates "recent_cpu" according to mlfqs scheduler*/
+void calculate_recent_cpu(struct thread *t)
+{
+	if (t != idle_thread)
+		t->recent_cpu = addif(multf(divf(multif(load_avg, 2), addif(multif(load_avg, 2), 1)), t->recent_cpu), t->nice);
+}
+/*Edited by Jin-Hyuk Jang (project 1 - advanced scheduler)*/
+
+/*Edited by Jin-Hyuk Jang
+We need a function that calculates "load_avg" according to mlfqs scheduler*/
+void calculate_load_avg()
+{
+	if (thread_current() != idle_thread)
+		load_avg = addf(multf(divf(itf(59), itf(60)), load_avg), multif(divf(itf(1), itf(60)), list_size(&ready_list) + 1));
+
+	else
+		load_avg = addf(multf(divf(itf(59), itf(60)), load_avg), multif(divf(itf(1), itf(60)), list_size(&ready_list)));
+}
+/*Edited by Jin-Hyuk Jang (project 1 - advanced scheduler)*/
+
+/*Edited by Jin-Hyuk Jang
+We need a function that increments "recent_cpu" by 1 every tick*/
+void increment_recent_cpu()
+{
+	if (thread_current() != idle_thread)
+		thread_current()->recent_cpu = addif(thread_current()->recent_cpu, 1);
+}
+/*Edited by Jin-Hyuk Jang (project 1 - advanced scheduler)*/
+
+/*Edited by Jin-Hyuk Jang
+We need a function that updates priority for all threads each 4th tick
+It also yields control of current_thread to first element in the ready queue if priority is smaller*/
+void update_priority()
+{
+	for (struct list_elem *e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e))
+	{
+		struct thread *t = list_entry(e, struct thread, elem);
+		calculate_priority(t);
+		list_sort(&ready_list, threadPriorityCompare, 0);
+	}
+
+	for (struct list_elem *e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next(e))
+	{
+		struct thread *t = list_entry(e, struct thread, elem);
+		calculate_priority(t);
+	}
+
+	calculate_priority(thread_current());
+	// calculate_priory(idle_thread);
+	//   checkForThreadYield();
+}
+/*Edited by Jin-Hyuk Jang(project 1 - advnaced scheduler)*/
+
+/*Edited by Jin-Hyuk Jang
+We need a function that updates "recent_cpu" for all threads every second*/
+void update_recent_cpu()
+{
+	for (struct list_elem *e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e))
+	{
+		struct thread *t = list_entry(e, struct thread, elem);
+		calculate_recent_cpu(t);
+	}
+
+	for (struct list_elem *e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next(e))
+	{
+		struct thread *t = list_entry(e, struct thread, elem);
+		calculate_recent_cpu(t);
+	}
+
+	calculate_recent_cpu(thread_current());
+	// calculate_recent_cpu(idle_thread);
+}
+/*Edited by Jin-Hyuk jang(project 1 - advanced scheduler)*/
+
 /* Sets the current thread's nice value to NICE. */
 void thread_set_nice(int nice UNUSED)
 {
 	/* TODO: Your implementation goes here */
+	/*Edited by Jin-Hyuk Jang
+	sets the "nice" value of current thread to given "nice"*/
+	enum intr_level old_level = intr_disable();
+	thread_current()->nice = nice;
+	calculate_priority(thread_current());
+	checkForThreadYield();
+	intr_set_level(old_level);
+	/*Edited by Jin-Hyuk Jang(project 1 - advanced scheduler)*/
 }
 
 /* Returns the current thread's nice value. */
 int thread_get_nice(void)
 {
 	/* TODO: Your implementation goes here */
-	return 0;
+	/*Edited by Jin-Hyuk Jang
+	Gets the "nice" value of current thread*/
+	enum intr_level old_level = intr_disable();
+	int nice = thread_current()->nice;
+	intr_set_level(old_level);
+	return nice;
+	/*Edited by Jin-Hyuk Jang (Project 1 - advanced scheduler)*/
 }
 
 /* Returns 100 times the system load average. */
 int thread_get_load_avg(void)
 {
 	/* TODO: Your implementation goes here */
-	return 0;
+	/*Edited by Jin-Hyuk Jang
+	Returns the load_avg * 100 result*/
+	enum intr_level old_level = intr_disable();
+	int result = ftir(multif(load_avg, 100));
+	intr_set_level(old_level);
+	return result;
+	/*Edited by Jin-Hyuk Jang (Project 1 - advanced scheduler)*/
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void)
 {
 	/* TODO: Your implementation goes here */
-	return 0;
+	/*Edited by Jin-Hyuk Jang
+	Returns the "recent_cpu" of current thread * 100*/
+	enum intr_level old_level = intr_disable();
+	int result = ftir(multif(thread_current()->recent_cpu, 100));
+	intr_set_level(old_level);
+	return result;
+	/*Edited by Jin-Hyuk jang(Project 1 - advanced scheduler)*/
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -597,32 +727,38 @@ init_thread(struct thread *t, const char *name, int priority)
 	t->priority = priority;
 
 	/* Edited Code - Jinhyen Kim
-	   priorityBase - The base priority value of the thread 
-	   priorityDonated - The priority value donated to the thread (if any) 
+	   priorityBase - The base priority value of the thread
+	   priorityDonated - The priority value donated to the thread (if any)
 	   Note: Initially, priorityDonated and priorityBase = priority */
 
 	(*t).priorityBase = priority;
 	(*t).priorityDonated = priority;
 
 	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
-	
+
 	/* Edited Code - Jinhyen Kim
 	   priorityDonors - The list of all the threads donating priority
 	   To create this list, we run list_init. */
-	
-	list_init (&((*t).priorityDonors));	
-	
+
+	list_init(&((*t).priorityDonors));
+
 	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
 	/* Edited Code - Jinhyen Kim
 	   targetLock - The pointer that points to the lock that the thread
-	      is waiting on, if any.
+		  is waiting on, if any.
 	   Note: Initially, targetLock points to NULL. */
-	
-	(*t).targetLock = NULL;	
-	
-	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */	
-	
+
+	(*t).targetLock = NULL;
+
+	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+
+	/*Edited by Jin-Hyuk Jang
+	the default value of "nice" and "recent_cpu" is set*/
+	t->nice = NICE_DEFAULT;
+	t->recent_cpu = RECENT_CPU_DEFAULT;
+	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
+
 	t->magic = THREAD_MAGIC;
 }
 
@@ -815,18 +951,21 @@ allocate_tid(void)
 	return tid;
 }
 
-/* Edited Code - Jinhyen Kim 
+/* Edited Code - Jinhyen Kim
    This code checks the priority of the current thread
-      and the highest-priority thread at ready_list.
+	  and the highest-priority thread at ready_list.
    If the thread at ready_list has a higher priority,
-      thread_yield is executed.
+	  thread_yield is executed.
    This function exists solely so that we can access
-      the static ready_list from other files. */
+	  the static ready_list from other files. */
 
-void checkForThreadYield (void) {
-	if (!(list_empty (&ready_list))) {
-		if (((*(list_entry (list_front (&ready_list), struct thread, elem))).priority) > ((*(thread_current ())).priority)) {
-			thread_yield ();
+void checkForThreadYield(void)
+{
+	if (!(list_empty(&ready_list)))
+	{
+		if (((*(list_entry(list_front(&ready_list), struct thread, elem))).priority) > ((*(thread_current())).priority))
+		{
+			thread_yield();
 		}
 	}
 }
