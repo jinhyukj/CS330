@@ -526,7 +526,7 @@ We need a function that calculates priority according to mlfqs scheduler*/
 void calculate_priority(struct thread *t)
 {
 	if (t != idle_thread)
-		t->priority = fti(subif(PRI_MAX, addif(divif(t->recent_cpu, 4), t->nice * 2)));
+		t->priority = fti(addif(divif(t->recent_cpu, -4), PRI_MAX - t->nice * 2));
 }
 /*Edited by Jin-Hyuk Jang (project 1 - advanced scheduler)*/
 
