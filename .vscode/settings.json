@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "stddef.h": "c",
+        "random.h": "c",
+        "stdio.h": "c",
+        "string.h": "c",
+        "interrupt.h": "c",
+        "palloc.h": "c",
+        "fp-arithmetic.h": "c",
+        "debug.h": "c"
+    }
+}
