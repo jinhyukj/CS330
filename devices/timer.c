@@ -143,8 +143,24 @@ timer_interrupt(struct intr_frame *args UNUSED)
 {
 	ticks++;
 	thread_tick();
+
+	/*Edited by Jin-Hyuk Jang
+	Update priority, "recent_cpu", "load_avg" every second or tick or 4 ticks*/
+	if (thread_mlfqs)
+	{
+		increment_recent_cpu();
+		if (ticks % TIMER_FREQ == 0)
+		{
+			calculate_load_avg();
+			update_recent_cpu();
+		}
+
+		if (ticks % 4 == 0)
+			update_priority();
+	}
+	/*Edited by Jin-Hyuk Jang(project 1 - advanced scheduler)*/
 	/* Must awake appropriate threads at the right tick
-	by Jin-Hyuk jang (project 1 - alarm clock) */
+		by Jin-Hyuk jang (project 1 - alarm clock) */
 	thread_wake(ticks);
 }
 

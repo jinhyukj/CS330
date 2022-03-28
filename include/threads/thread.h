@@ -28,6 +28,13 @@ typedef int tid_t;
 #define PRI_DEFAULT 31 /* Default priority. */
 #define PRI_MAX 63	   /* Highest priority. */
 
+/*Edited by Jin-Hyuk Jang
+Default values of "nice", "recent_cpu", and "load_avg" are all 0*/
+#define NICE_DEFAULT 0
+#define RECENT_CPU_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
+/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -103,9 +110,9 @@ struct thread
 
 	/* Edited Code - Jinhyen Kim
 	   A thread has its own priority value, but it can also receive
-	      a priority donation from a thread with a different priority.
+		  a priority donation from a thread with a different priority.
 	   We add two elements priorityBase and priorityDonated to store
-	      these two values. 
+		  these two values.
 	   Note: priority = max (priorityBase, priorityDonated) */
 
 	int priorityBase;
@@ -115,9 +122,9 @@ struct thread
 
 	/* Edited Code - Jinhyen Kim
 	   A thread may receive multiple donations, of which only the thread
-	      with the highest priority effectively matters.
-	   In order to keep track of all the donating threads, we add a list 
-	      priorityDonors and a list_elem priorityDonorsElement. 
+		  with the highest priority effectively matters.
+	   In order to keep track of all the donating threads, we add a list
+		  priorityDonors and a list_elem priorityDonorsElement.
 	   Note: To find the highest priority, we can simply sort priorityDonors. */
 
 	struct list priorityDonors;
@@ -127,15 +134,29 @@ struct thread
 
 	/* Edited Code - Jinhyen Kim
 	   To implement Nested Priority Donation, we need a way to learn what lock
-	      each thread is waiting on, as well as what thread each lock is being 
-	      held by.
+		  each thread is waiting on, as well as what thread each lock is being
+		  held by.
 	   Although each lock stores their holder, the threads does not store any
-	      information about what lock they are waiting on.
+		  information about what lock they are waiting on.
 	   We add a new element targetLock, a lock pointer, to store this information. */
 
 	struct lock *targetLock;
 
 	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
+
+	/*Edited by Jin-Hyuk Jang
+	We now add "nice" and "recent_cpu" to thread structure.
+	"nice": An integer ranging from -20 to 20. In default, it is 0, but it also depends on what "nice" value the parent thread has.
+	The bigger the "nice" is, the lower the priority.
+
+	"recent_cpu": An integer(orignally a floating point, but changed into integer through fixed-point arithmetic)
+	 that shows how much CPU time the thread has been using.
+	The bigger the "recent_cpu", the lower the priority*/
+
+	int nice;
+	int recent_cpu;
+
+	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
