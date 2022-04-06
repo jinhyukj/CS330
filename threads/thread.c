@@ -394,6 +394,7 @@ void thread_yield(void)
 	enum intr_level old_level;
 
 	ASSERT(!intr_context());
+	
 
 	old_level = intr_disable();
 	if (curr != idle_thread)

@@ -7,6 +7,7 @@
         "interrupt.h": "c",
         "palloc.h": "c",
         "fp-arithmetic.h": "c",
-        "debug.h": "c"
+        "debug.h": "c",
+        "init.h": "c"
     }
 }

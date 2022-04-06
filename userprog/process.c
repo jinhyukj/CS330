@@ -43,6 +43,12 @@ process_create_initd (const char *file_name) {
 	char *fn_copy;
 	tid_t tid;
 
+	//test
+	// char *token, *save_ptr;
+	// token = strtok_r (file_name, " ", &save_ptr);
+	// file_name = token;
+
+
 	/* Make a copy of FILE_NAME.
 	 * Otherwise there's a race between the caller and load(). */
 	fn_copy = palloc_get_page (0);
@@ -51,6 +57,13 @@ process_create_initd (const char *file_name) {
 	strlcpy (fn_copy, file_name, PGSIZE);
 
 	/* Create a new thread to execute FILE_NAME. */
+
+	// test printf
+	//printf("in process_create-initd - process.c 56\n");
+	
+	//test file parsing
+	//token = strtok_r (file_name, " ", &save_ptr);
+
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
@@ -65,6 +78,9 @@ initd (void *f_name) {
 #endif
 
 	process_init ();
+
+	// test printf
+	//printf("In  initd - process.c 74\n");
 
 	if (process_exec (f_name) < 0)
 		PANIC("Fail to launch initd\n");
@@ -165,6 +181,21 @@ process_exec (void *f_name) {
 	char *file_name = f_name;
 	bool success;
 
+	printf("Do process_exec");
+
+	/* Edited Code by Jin-Hyuk Jang
+	The variables we need to perform argument passing below */
+	char *copied_file_name[48];
+	int count = 0;
+	char *token, *save_ptr;
+	char *args[64];
+	/* Edited Code by Jin-Hyuk Jang (project 2 - argument passing)*/
+
+	/*Edited Code by Jin-Hyuk Jang
+	We copy the file with the name f_name in order to parse it without damaging the original*/
+	memcpy(copied_file_name, file_name, strlen(file_name) + 1);
+	/*Edited Code by Jin-Hyuk Jang (project 2 - argument passing)*/
+
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
@@ -176,18 +207,77 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	/* Edited Code by Jin-Hyuk Jang 
+	Since f_name is actually the file name with the arguments, we must parse it.
+	For every blank space, we divide the copied_file_name and put each segment into a list using strtok*/
+	for (token = strtok_r (copied_file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
+	 	args[count] = token;
+	 	count++;
+	}
+
+	/* Edited Code by Jin-Hyuk Jang 
+	We add argument_stack function to add arguments and address values to stack */
+	argument_to_stack(args, count, &_if);
+	/* Edited Code by Jin-Hyuk Jang (project 2 - argument passing)*/
+	//char *changed_file_name = args[0];
+
+	/* Edited Code by Jin-Hyuk Jang (project 2 - Argument passing) */
 	/* And then load the binary */
 	success = load (file_name, &_if);
+
+	// test printf
+	//printf("In process_exec - process.c 206\n");
+
+	
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
 	if (!success)
 		return -1;
 
+	
+
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
 }
+
+
+/* Edited Code by Jin-Hyuk Jang
+We add function "argumemnt_stack" in order to add arguments and address values to user stack */
+void argument_to_stack(char **args, int count, struct intr_frame *if_){
+	char *address_list[64];
+
+	for (int i = count - 1; i >= 0; i--){
+		if_->rsp = if_->rsp - (strlen(args[i]) + 1);
+		address_list[i] = if_->rsp;
+		memcpy(if_->rsp, args[i], strlen(args[i]) + 1);
+		
+	}
+
+	while (if_ -> rsp % 8 != 0){
+		if_->rsp--;
+		*(uint8_t *)(if_->rsp) = 0;
+	}
+
+	for (int i = count; i>= 0; i --){
+		if_->rsp -= 8;
+
+		if (i != count)
+			memset(if_ -> rsp, &address_list[i], sizeof(char **));
+
+		else
+			memset(if_ -> rsp, 0, sizeof(char **));	
+	}
+	if_ -> R.rsi = if_ -> rsp;
+	if_ -> R.rdi = count;
+	if_ -> rsp -= 8;
+	memset(if_ -> rsp, 0, sizeof(void *));
+
+	//hex_dump (if_->rsp, if_->rsp, sizeof(struct intr_frame), true);
+
+}
+/* Edited Code by Jin-Hyuk Jang (project 2 - argument passing) */
 
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -201,6 +291,7 @@ process_exec (void *f_name) {
  * does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) {
+	while(true){}
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */

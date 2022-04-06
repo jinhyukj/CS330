@@ -120,6 +120,9 @@ main (void) {
 
 	printf ("Boot complete.\n");
 
+	//test printf
+	//printf("In main() - int.c 124\n");
+
 	/* Run actions specified on kernel command line. */
 	run_actions (argv);
 
@@ -246,6 +249,9 @@ run_task (char **argv) {
 	if (thread_tests){
 		run_test (task);
 	} else {
+		// test printf
+		//printf("in run_task - init.c 253\n");
+
 		process_wait (process_create_initd (task));
 	}
 #else
@@ -264,6 +270,9 @@ run_actions (char **argv) {
 		int argc;                         /* # of args, including action name. */
 		void (*function) (char **argv);   /* Function to execute action. */
 	};
+
+	// test printf
+	//printf("In run_actions - init.c 272\n");
 
 	/* Table of supported actions. */
 	static const struct action actions[] = {
