@@ -158,6 +158,40 @@ error:
 	thread_exit ();
 }
 
+
+void argument_stack(char **args, int count, struct intr_frame *if_){
+	char *address_list[64];
+
+	for (int i = count - 1; i >= 0; i--){
+		if_->rsp = if_->rsp - (strlen(args[i]) + 1);
+		address_list[i] = if_->rsp;
+		memcpy(if_->rsp, args[i], strlen(args[i]) + 1);
+		
+	}
+
+	while (if_ -> rsp % 8 != 0){
+		if_->rsp--;
+		*(uint8_t *)(if_->rsp) = 0;
+	}
+
+	for (int i = count; i>= 0; i --){
+		if_->rsp -= 8;
+
+		if (i != count)
+			memset(if_ -> rsp, &address_list[i], sizeof(char **));
+
+		else
+			memset(if_ -> rsp, 0, sizeof(char **));	
+	}
+	if_ -> R.rsi = if_ -> rsp;
+	if_ -> R.rdi = count;
+	if_ -> rsp -= 8;
+	memset(if_ -> rsp, 0, sizeof(void *));
+
+}
+
+
+
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
 int
@@ -173,11 +207,32 @@ process_exec (void *f_name) {
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
+
+
+	char *argv[64];
+	int argc = 0;
+
+	char *token;
+	char *save_ptr;
+
+	char *copied_file_name[48];
+	memcpy(copied_file_name, file_name, strlen(file_name) + 1);
+	
+	for (token = strtok_r (copied_file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
+	 	argv[argc] = token;
+	 	argc++;
+	}
+
+
 	/* We first kill the current context */
 	process_cleanup ();
 
 	/* And then load the binary */
 	success = load (file_name, &_if);
+
+
+	argument_stack(argv, argc, &_if);
+	
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);

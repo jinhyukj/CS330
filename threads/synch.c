@@ -185,9 +185,9 @@ void sema_up(struct semaphore *sema)
 				  call thread_yield. */
 
 		sema->value++;
-
-		checkForThreadYield();
-
+		if (!intr_context()) {
+			checkForThreadYield();
+		}
 		intr_set_level(old_level);
 
 		/* Edited Code - Jinhyen Kim (Project 1 - Priority Scheduling) */
