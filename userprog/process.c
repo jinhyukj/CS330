@@ -158,8 +158,9 @@ error:
 	thread_exit ();
 }
 
-
-void argument_stack(char **args, int count, struct intr_frame *if_){
+/* Edited Code by Jin-Hyuk Jang
+We add function "argumemnt_stack" in order to add arguments and address values to user stack */
+void argument_to_stack(char **args, int count, struct intr_frame *if_){
 	char *address_list[64];
 
 	for (int i = count - 1; i >= 0; i--){
@@ -189,7 +190,7 @@ void argument_stack(char **args, int count, struct intr_frame *if_){
 	memset(if_ -> rsp, 0, sizeof(void *));
 
 }
-
+/* Edited Code by Jin-Hyuk Jang (project 2 - argument passing) */
 
 
 /* Switch the current execution context to the f_name.
@@ -208,7 +209,8 @@ process_exec (void *f_name) {
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
 
-
+	/* Edited Code by Jin-Hyuk Jang
+	The variables we need to perform argument passing below */
 	char *argv[64];
 	int argc = 0;
 
@@ -216,8 +218,17 @@ process_exec (void *f_name) {
 	char *save_ptr;
 
 	char *copied_file_name[48];
-	memcpy(copied_file_name, file_name, strlen(file_name) + 1);
+	/* Edited Code by Jin-Hyuk Jang (project 2 - argument passing)*/
 	
+	/*Edited Code by Jin-Hyuk Jang
+	We copy the file with the name f_name in order to parse it without damaging the original*/
+	memcpy(copied_file_name, file_name, strlen(file_name) + 1);
+	/*Edited Code by Jin-Hyuk Jang (project 2 - argument passing)*/
+	
+	
+	/* Edited Code by Jin-Hyuk Jang 
+	Since f_name is actually the file name with the arguments, we must parse it.
+	For every blank space, we divide the copied_file_name and put each segment into a list using strtok*/
 	for (token = strtok_r (copied_file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
 	 	argv[argc] = token;
 	 	argc++;
@@ -230,8 +241,9 @@ process_exec (void *f_name) {
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
-
-	argument_stack(argv, argc, &_if);
+	/* Edited Code by Jin-Hyuk Jang 
+	We add argument_stack function to add arguments and address values to stack */
+	argument_to_stack(argv, argc, &_if);
 	
 
 	/* If load failed, quit. */
