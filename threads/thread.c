@@ -760,6 +760,25 @@ init_thread(struct thread *t, const char *name, int priority)
 	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
 
 	t->magic = THREAD_MAGIC;
+
+	/* Edited Code - Jinhyen Kim
+	   exitStatus - Status of termination.
+	   exitStatus of 0 indicates success,
+	   exitStatus of non-zero value indicates failure.*/
+
+	(*t).exitStatus = 0;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+	/* Edited Code - Jinhyen Kim
+	   fdTable - Table storing all fd's
+	   fdIndex - The first open spot of the fd table */
+
+	/*(*t).fdTable[1535] = NULL;*/
+	(*t).fdIndex = 2;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */	
+
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

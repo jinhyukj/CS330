@@ -158,6 +158,28 @@ struct thread
 
 	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
 
+	/* Edited Code - Jinhyen Kim
+	   For SYS_EXIT, We need to store the status of termination 
+	   to return at SYS_WAIT.
+	   exitStatus of 0 indicates success,
+	   exitStatus of non-zero value indicates failure.*/
+
+	int exitStatus;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+	/* Edited Code - Jinhyen Kim
+	   To implement File Descriptor, we need to have a storage
+	   space for the fd's.
+	   The pointer fdTable points to the table storing all fd's. 
+	   Additionally, we add another integer that stores the
+	   first open spot of the fd table.*/
+
+	struct file **fdTable;
+	int fdIndex;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */
