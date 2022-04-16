@@ -178,7 +178,7 @@ void argument_stack(char **args, int count, struct intr_frame *if_){
 		if_->rsp -= 8;
 
 		if (i != count)
-			memset(if_ -> rsp, &address_list[i], sizeof(char **));
+			memcpy(if_ -> rsp, &address_list[i], sizeof(char **));
 
 		else
 			memset(if_ -> rsp, 0, sizeof(char **));	
@@ -228,16 +228,14 @@ process_exec (void *f_name) {
 	process_cleanup ();
 
 	/* And then load the binary */
-	success = load (file_name, &_if);
-
-
-	argument_stack(argv, argc, &_if);
-	
+	success = load (argv[0], &_if);
 
 	/* If load failed, quit. */
-	palloc_free_page (file_name);
+	//palloc_free_page (file_name);
 	if (!success)
 		return -1;
+
+	argument_stack(argv, argc, &_if);
 
 	/* Start switched process. */
 	do_iret (&_if);

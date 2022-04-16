@@ -14,8 +14,8 @@ Putting 'close-normal' into the file system...
 Putting 'sample.txt' into the file system...
 Executing 'close-normal':
 Execution of 'close-normal' complete.
-Timer: 77 ticks
-Thread: 31 idle ticks, 46 kernel ticks, 0 user ticks
+Timer: 81 ticks
+Thread: 33 idle ticks, 49 kernel ticks, 0 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 61 reads, 248 writes
 hd1:0: 105 reads, 0 writes

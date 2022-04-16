@@ -158,6 +158,8 @@ struct thread
 
 	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
 
+
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */

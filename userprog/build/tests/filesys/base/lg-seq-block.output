@@ -13,7 +13,7 @@ Boot complete.
 Putting 'lg-seq-block' into the file system...
 Executing 'lg-seq-block':
 Execution of 'lg-seq-block' complete.
-Timer: 80 ticks
+Timer: 79 ticks
 Thread: 31 idle ticks, 49 kernel ticks, 0 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 33 reads, 240 writes

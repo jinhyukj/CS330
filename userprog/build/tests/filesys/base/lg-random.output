@@ -13,8 +13,8 @@ Boot complete.
 Putting 'lg-random' into the file system...
 Executing 'lg-random':
 Execution of 'lg-random' complete.
-Timer: 80 ticks
-Thread: 32 idle ticks, 48 kernel ticks, 0 user ticks
+Timer: 83 ticks
+Thread: 35 idle ticks, 48 kernel ticks, 0 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 34 reads, 248 writes
 hd1:0: 110 reads, 0 writes
