@@ -158,6 +158,14 @@ struct thread
 
 	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
 
+#ifdef USERPROG
+	/* Owned by userprog/process.c. */
+	uint64_t *pml4; /* Page map level 4 */
+
+	struct semaphore *wait_lock;
+	struct list child_list;
+	struct list_elem child_elem;
+
 	/* Edited Code - Jinhyen Kim
 	   For SYS_EXIT, We need to store the status of termination 
 	   to return at SYS_WAIT.
@@ -175,14 +183,15 @@ struct thread
 	   Additionally, we add another integer that stores the
 	   first open spot of the fd table.*/
 
-	struct file **fdTable;
-	int fdIndex;
+	struct file *fd[14];
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
-#ifdef USERPROG
-	/* Owned by userprog/process.c. */
-	uint64_t *pml4; /* Page map level 4 */
+	bool is_valid;
+
+	struct semaphore *destroy_lock;
+	struct semaphore *fork_lock;
+
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -207,6 +216,8 @@ void thread_print_stats(void);
 
 typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
+tid_t thread_create_tf(const char *name, int priority,
+					   thread_func *function, void *aux, struct intr_frame *tf);
 
 void thread_block(void);
 void thread_unblock(struct thread *);

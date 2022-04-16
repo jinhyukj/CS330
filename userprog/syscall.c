@@ -7,9 +7,30 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
+#include "filesys/off_t.h"
+#include "threads/synch.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
+#include "userprog/process.h"
+#include "lib/kernel/stdio.h"
 
-void syscall_entry (void);
-void syscall_handler (struct intr_frame *);
+void syscall_entry(void);
+void syscall_handler(struct intr_frame *);
+
+
+/* Edited Code - Jinhyen Kim */
+
+struct file
+{
+	struct inode *inode;
+	off_t pos;
+	bool deny_write;
+};
+
+static struct lock fileLock;
+
+/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 
 /* System call.
  *
@@ -20,26 +41,30 @@ void syscall_handler (struct intr_frame *);
  * The syscall instruction works by reading the values from the the Model
  * Specific Register (MSR). For the details, see the manual. */
 
-#define MSR_STAR 0xc0000081         /* Segment selector msr */
-#define MSR_LSTAR 0xc0000082        /* Long mode SYSCALL target */
+#define MSR_STAR 0xc0000081			/* Segment selector msr */
+#define MSR_LSTAR 0xc0000082		/* Long mode SYSCALL target */
 #define MSR_SYSCALL_MASK 0xc0000084 /* Mask for the eflags */
 
-void
-syscall_init (void) {
-	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
-			((uint64_t)SEL_KCSEG) << 32);
-	write_msr(MSR_LSTAR, (uint64_t) syscall_entry);
+void syscall_init(void)
+{
+	lock_init(&fileLock);
+	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48 |
+							((uint64_t)SEL_KCSEG) << 32);
+	write_msr(MSR_LSTAR, (uint64_t)syscall_entry);
 
 	/* The interrupt service rountine should not serve any interrupts
 	 * until the syscall_entry swaps the userland stack to the kernel
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
-			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+			  FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
+
+
 
 /* Edited Code - Jinhyen Kim */
 
-void halt (void) {
+void halt(void)
+{
 
 	/*Terminates Pintos by calling power_off(). */
 
@@ -48,7 +73,8 @@ void halt (void) {
 
 }
 
-void exit (int status) {
+void exit(int status)
+{
 
 	/* Edited Code - Jinhyen Kim
 	   If the current process is a child process, we need
@@ -92,45 +118,27 @@ void checkUMA (void* userAddress) {
 
 /* Edited Code - Jinhyen Kim*/
 
-tid_t fork (const char *thread_name) {
-}
+pid_t fork(const char *thread_name, struct intr_frame *f)
+{
 
-int exec (const char *cmd_line) {
-
-	/* When we execute a file, we need to check if the file
-	   location is a valid User Memory. */
-	checkUMA(cmd_line);
-			
-	/* We need to convert the current process to an executable
-	   file. This is done by:
-	      1. Calling palloc_get_page() to get a free page to store 
-	            the executable. If this returns NULL, it means no 
-	            pages are avaliable.
-	      2. Calling strlcpy() to copy the file into the page.
-	      3. Calling process_exec() to see if the file is executable. */
-
-	char* newPage = palloc_get_page(2);
-
-	if (newPage == NULL) {
-		exit(-1);
-	}
-
-	strlcpy(newPage, cmd_line, strlen(cmd_line) + 1);
-
-	if (process_exec(newPage) == -1) {
-		exit(-1);
-	}
-
-	return;
+	return process_fork(thread_name, f);
 
 }
 
-/* Edited Code - Jinhyen Kim*/
+int exec(const char *cmd_line)
+{
 
-int wait (tid_t pid) {
+	return process_exec(cmd_line);
+
 }
 
-/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+int wait (pid_t pid) {
+
+	return process_wait(pid);
+
+}
+
 
 bool create (const char *file, unsigned initial_size) {
 
@@ -179,38 +187,45 @@ int open (const char *file) {
 	   If this is the case, we return -1.
 	   Otherwise, we return the value equal to the file descriptor. */
 
+	if (file == NULL) {
+		exit(-1);
+	}
+	
+	lock_acquire(&fileLock);
+
 	struct file *targetFile = filesys_open(file);
+
 	if (targetFile == NULL) {
+		lock_release(&fileLock);
 		return -1;
 	}
 
-	while (((*(thread_current())).fdIndex < 1536) && ((*(thread_current())).fdTable[(*(thread_current())).fdIndex] != NULL)) {
-		(*(thread_current())).fdIndex = (*(thread_current())).fdIndex + 1;
-	}
+	for (int i = 2; i < 14; i++) {
+		
+		struct thread *curr = thread_current();
+		if ((*(thread_current())).fd[i] == NULL) {
 
-	if ((*(thread_current())).fdIndex > 1535) {
-		file_close(targetFile);
-		return -1;
+			if (strcmp(curr->name, file) == false)
+				file_deny_write(targetFile);
+
+			(*(thread_current())).fd[i] = targetFile;
+			lock_release(&fileLock);
+
+			return i;
+		}
 	}
-	else {
-		(*(thread_current())).fdTable[(*(thread_current())).fdIndex] = targetFile;
-		return (*(thread_current())).fdIndex;
-	}
+	lock_release(&fileLock);
+	return -1;
 
 }
 
 int filesize (int fd) {
 
-	/* When we check the filesize, we need to check whether the provided
-	      file descriptor is less than the maximum file descriptor value.
-	   If this is the case, we return -1.
-	   Otherwise, we return the file size.*/
-
-	if ((fd < 0) || (fd > 1535) || ((*(thread_current())).fdTable[fd] == NULL)) {
-		return -1;
+	if ((fd < 0) || (fd > 13) || ((*(thread_current())).fd[fd] == NULL)) {
+		exit(-1);
 	}
-	else {					
-		return file_length(&((*(thread_current())).fdTable[fd]));
+	else {
+		return file_length((*(thread_current())).fd[fd]);
 	}
 
 }
@@ -229,18 +244,20 @@ int read (int fd, void *buffer, unsigned size) {
 	      input_getc(). 
 	   Otherwise, we read the file with the corresponding
 	      fd index to the current thread's fd table. */
+	lock_acquire(&fileLock);
 	if (fd == 0) {
 		*(char *)buffer = input_getc();
+		lock_release(&fileLock);
 		return size;
 	}	
 
-	if ((fd < 0) || (fd > 1535) || ((*(thread_current())).fdTable[fd] == NULL)) {
+	if ((fd < 0) || (fd > 13) || ((*(thread_current())).fd[fd] == NULL)) {
+		lock_release(&fileLock);
 		return -1;
 	}
 
 	else {
-		lock_acquire(&fileLock);
-		bytesRead = file_read((&((*(thread_current())).fdTable[fd])), buffer, size);
+		bytesRead = file_read(((*(thread_current())).fd[fd]), buffer, size);
 		lock_release(&fileLock);
 		return bytesRead;
 	}
@@ -252,28 +269,33 @@ int write (int fd, const void *buffer, unsigned size) {
 	/* When we write to an open file, we need to check if 
 	      the file location is a valid User Memory. */
 	checkUMA(buffer);
+
+	/* While we work at a file, we need to lock it first. */
+	lock_acquire(&fileLock);
+
+	if (fd == 1) {
+		putbuf(buffer, size);
+		lock_release(&fileLock);
+		return size;
+	}
 			
 	/* The return value of write() is the number of 
 	      bytes we write (-1 if the command is invalid). */
 	int bytesWritten = 0;
 
-	/* While we work at a file, we need to lock it first. */
-	lock_acquire(&fileLock);
+
 
 	/* fd = 1 writes to the console with the function
 	      putbuf(). 
 	   Otherwise, we write to the file with the corresponding
 	      fd index to the current thread's fd table. */
-	if (fd == 1) {
-		putbuf(buffer, size);
-		bytesWritten = size;
-	}
-	else {
-		if ((fd < 0) || (fd > 1535) || ((*(thread_current())).fdTable[fd] == NULL)) {
+
+	if (fd != 1) {
+		if ((fd < 0) || (fd > 13) || ((*(thread_current())).fd[fd] == NULL)) {
 			bytesWritten = -1;
 		}
 		else {	
-			bytesWritten = file_write((*(thread_current())).fdTable[fd], buffer, size);
+			bytesWritten = file_write((*(thread_current())).fd[fd], buffer, size);
 		}
 	}
 
@@ -285,13 +307,13 @@ int write (int fd, const void *buffer, unsigned size) {
 
 void seek (int fd, unsigned position) {
 
-	if ((fd < 2) || (fd > 1535) || ((*(thread_current())).fdTable[fd] == NULL)) {
+	if ((fd < 2) || (fd > 13) || ((*(thread_current())).fd[fd] == NULL)) {
 		return;
 	}
 	else {
 		lock_acquire(&fileLock);
 
-		file_seek((*(thread_current())).fdTable[fd], position);
+		file_seek((*(thread_current())).fd[fd], position);
 
 		lock_release(&fileLock);
 		return;
@@ -301,13 +323,13 @@ void seek (int fd, unsigned position) {
 
 unsigned tell (int fd) {
 
-	if ((fd < 2) || (fd > 1535) || ((*(thread_current())).fdTable[fd] == NULL)) {
-		return 0;
+	if ((fd < 2) || (fd > 13) || ((*(thread_current())).fd[fd] == NULL)) {
+		exit(-1);
 	}
 	else {
 		lock_acquire(&fileLock);
 
-		file_tell((*(thread_current())).fdTable[fd]);
+		file_tell((*(thread_current())).fd[fd]);
 
 		lock_release(&fileLock);
 		return;
@@ -317,26 +339,22 @@ unsigned tell (int fd) {
 
 void close (int fd) {
 
-	if ((fd < 0) || (fd > 1535) || ((*(thread_current())).fdTable[fd] == NULL)) {
-		return;
+	if ((fd < 0) || (fd > 13) || ((*(thread_current())).fd[fd] == NULL)) {
+		exit(-1);
 	}
 	else {
-		file_close(&((*(thread_current())).fdTable[fd]));		
-		(*(thread_current())).fdTable[fd] == NULL;
+		file_close((*(thread_current())).fd[fd]);		
+		(*(thread_current())).fd[fd] = NULL;
 		return;
 	}
 
 }
 
-/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 /* The main system call interface */
+void syscall_handler(struct intr_frame *f UNUSED)
+{
 
-/* Edited Code - Jinhyen Kim */
-
-void
-syscall_handler (struct intr_frame *f) {
-	
 	/* Edited Code - Jinhyen Kim
 
 	Copied from syscall-nr.h
@@ -376,7 +394,7 @@ syscall_handler (struct intr_frame *f) {
 
 		case SYS_FORK:
 
-			/*(((*(f)).R).rax) = fork((((*(f)).R).rdi), f);*/
+			(((*(f)).R).rax) = fork((((*(f)).R).rdi), f);
 			break;
 
 		case SYS_EXEC:
@@ -385,6 +403,8 @@ syscall_handler (struct intr_frame *f) {
 			break;
 			
 		case SYS_WAIT:
+
+			(((*(f)).R).rax) = wait((((*(f)).R).rdi));
 			break;
 
 		case SYS_CREATE:
@@ -433,8 +453,10 @@ syscall_handler (struct intr_frame *f) {
 			break;
 
 		/* Extra for Project 2:*/
-		case SYS_DUP2:
-			break;			
+		/*case SYS_DUP2:*/
+
+			/*(((*(f)).R).rax) = dup2((((*(f)).R).rdi), (((*(f)).R).rsi));*/
+			/*break;*/			
 
 		default:
 
@@ -443,9 +465,6 @@ syscall_handler (struct intr_frame *f) {
 			   with an invalid status. */
 			exit(-1);
 			break;
-
 	}
-	
-}
 
-/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+}

@@ -122,7 +122,7 @@ page_fault (struct intr_frame *f) {
 	bool write;        /* True: access was write, false: access was read. */
 	bool user;         /* True: access by user, false: access by kernel. */
 	void *fault_addr;  /* Fault address. */
-
+	//printf("page fault occured on intr_frame on this address:%p\n\n\n", &f);
 	/* Obtain faulting address, the virtual address that was
 	   accessed to cause the fault.  It may point to code or to
 	   data.  It is not necessarily the address of the instruction
@@ -139,6 +139,19 @@ page_fault (struct intr_frame *f) {
 	not_present = (f->error_code & PF_P) == 0;
 	write = (f->error_code & PF_W) != 0;
 	user = (f->error_code & PF_U) != 0;
+	//printf("thread: %s\n", thread_current()->name);
+	// if (!user){
+	// 	//printf("not user\n");
+		exit(-1);
+	// } 
+	// if (not_present){
+	// 	//printf("not present\n");
+		exit(-1);
+	// } 
+	// if (is_kernel_vaddr(fault_addr)){
+	// 	//printf("kernel vaddr\n");
+		exit(-1);
+	// } 
 
 #ifdef VM
 	/* For project 3 and later. */

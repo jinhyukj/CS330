@@ -246,7 +246,49 @@ tid_t thread_create(const char *name, int priority,
 
 	return tid;
 }
+tid_t thread_create_tf(const char *name, int priority,
+					   thread_func *function, void *aux, struct intr_frame *tf)
+{
+	struct thread *t;
+	tid_t tid;
 
+	ASSERT(function != NULL);
+
+	/* Allocate thread. */
+	t = palloc_get_page(PAL_ZERO);
+	if (t == NULL)
+		return TID_ERROR;
+
+	/* Initialize thread. */
+	init_thread(t, name, priority);
+	tid = t->tid = allocate_tid();
+
+	/* Call the kernel_thread if it scheduled.
+	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
+	t->tf.rip = (uintptr_t)kernel_thread;
+	t->tf.R.rdi = (uint64_t)function;
+	t->tf.R.rsi = (uint64_t)aux;
+	t->tf.R.rdx = (uint64_t)tf;
+	//printf("%p\n", t->tf.R.rdx);
+	t->tf.ds = SEL_KDSEG;
+	t->tf.es = SEL_KDSEG;
+	t->tf.ss = SEL_KDSEG;
+	t->tf.cs = SEL_KCSEG;
+	t->tf.eflags = FLAG_IF;
+	//hex_dump(&t->tf, &t->tf, sizeof(struct intr_frame), 1);
+	/* Add to run queue. */
+	thread_unblock(t);
+
+	if (!list_empty(&ready_list))
+	{
+		const struct thread *waiting = list_entry(list_front(&ready_list), struct thread, elem);
+		if (thread_current()->priority < waiting->priority)
+		{
+			thread_yield();
+		}
+	}
+	return tid;
+}
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
 
@@ -761,6 +803,12 @@ init_thread(struct thread *t, const char *name, int priority)
 
 	t->magic = THREAD_MAGIC;
 
+#ifdef USERPROG
+
+	sema_init(&(t->wait_lock), 0);
+	list_init(&(t->child_list));
+	list_push_back(&(running_thread()->child_list), &(t->child_elem));
+
 	/* Edited Code - Jinhyen Kim
 	   exitStatus - Status of termination.
 	   exitStatus of 0 indicates success,
@@ -771,13 +819,22 @@ init_thread(struct thread *t, const char *name, int priority)
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 	/* Edited Code - Jinhyen Kim
-	   fdTable - Table storing all fd's
-	   fdIndex - The first open spot of the fd table */
+	   fdTable - Table storing all fd's */
+	
+	for (int i = 0; i < 14; i++)
+	{
+		t->fd[i] = NULL;
+	}
 
-	/*(*t).fdTable[1535] = NULL;*/
-	(*t).fdIndex = 2;
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
-	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */	
+	t->is_valid = true;
+
+	sema_init(&(t->destroy_lock), 0);
+	sema_init(&(t->fork_lock), 0);
+
+#endif
+	
 
 }
 
