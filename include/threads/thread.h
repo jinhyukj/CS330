@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -161,8 +162,9 @@ struct thread
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */
+#endif
 
-	struct semaphore *wait_lock;
+	struct semaphore wait_sema;
 	struct list child_list;
 	struct list_elem child_elem;
 
@@ -172,7 +174,7 @@ struct thread
 	   exitStatus of 0 indicates success,
 	   exitStatus of non-zero value indicates failure.*/
 
-	int exitStatus;
+	int exit_status;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
@@ -183,16 +185,18 @@ struct thread
 	   Additionally, we add another integer that stores the
 	   first open spot of the fd table.*/
 
-	struct file *fd[14];
+	struct intr_frame parent_if;
+
+   	struct file **fdTable;
+    	int fdIdx;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
-	bool is_valid;
+	struct file *running;
 
-	struct semaphore *destroy_lock;
-	struct semaphore *fork_lock;
+	struct semaphore free_sema;
+	struct semaphore fork_sema;
 
-#endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
@@ -249,5 +253,8 @@ This will wake up the threads that need to wake up by turnning the thread states
 THREAD_READY, and allocating them on the ready list
 by Jin-Hyuk Jang (project 1 - alarm clock) */
 void thread_wake(int64_t ticks);
+
+#define FDT_PAGES 3
+#define FDCOUNT_LIMIT FDT_PAGES * (1<<9)
 
 #endif /* threads/thread.h */

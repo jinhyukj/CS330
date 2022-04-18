@@ -212,6 +212,17 @@ tid_t thread_create(const char *name, int priority,
 	init_thread(t, name, priority);
 	tid = t->tid = allocate_tid();
 
+	list_push_back(&((*(thread_current())).child_list),&((*(t)).child_elem));
+
+    	t->fdTable = palloc_get_multiple(PAL_ZERO,FDT_PAGES);
+    	if (t->fdTable == NULL)
+        	return TID_ERROR;
+    	t->fdIdx = 2;
+   	t->fdTable[0] = 1;
+   	t->fdTable[1] = 2;
+
+
+
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t)kernel_thread;
@@ -803,37 +814,27 @@ init_thread(struct thread *t, const char *name, int priority)
 
 	t->magic = THREAD_MAGIC;
 
-#ifdef USERPROG
 
-	sema_init(&(t->wait_lock), 0);
+
+	sema_init(&t->wait_sema,0);
 	list_init(&(t->child_list));
-	list_push_back(&(running_thread()->child_list), &(t->child_elem));
+
 
 	/* Edited Code - Jinhyen Kim
 	   exitStatus - Status of termination.
 	   exitStatus of 0 indicates success,
 	   exitStatus of non-zero value indicates failure.*/
 
-	(*t).exitStatus = 0;
+	(*t).exit_status = 0;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
-	/* Edited Code - Jinhyen Kim
-	   fdTable - Table storing all fd's */
-	
-	for (int i = 0; i < 14; i++)
-	{
-		t->fd[i] = NULL;
-	}
 
-	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
-	t->is_valid = true;
+	sema_init(&t->fork_sema,0);
+	sema_init(&t->free_sema,0);
 
-	sema_init(&(t->destroy_lock), 0);
-	sema_init(&(t->fork_lock), 0);
 
-#endif
 	
 
 }
