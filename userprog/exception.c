@@ -155,6 +155,13 @@ page_fault (struct intr_frame *f) {
 			not_present ? "not present" : "rights violation",
 			write ? "writing" : "reading",
 			user ? "user" : "kernel");
+
+	/* Edited Code - Jinhyen Kim
+	   Now that we have the system call exit(), we can
+	      use it here. */
+	
 	exit(-1);
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 }
 

@@ -164,17 +164,13 @@ struct thread
 	uint64_t *pml4; /* Page map level 4 */
 #endif
 
-	struct semaphore wait_sema;
-	struct list child_list;
-	struct list_elem child_elem;
-
 	/* Edited Code - Jinhyen Kim
 	   For SYS_EXIT, We need to store the status of termination 
 	   to return at SYS_WAIT.
 	   exitStatus of 0 indicates success,
 	   exitStatus of non-zero value indicates failure.*/
 
-	int exit_status;
+	int exitStatus;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
@@ -185,17 +181,56 @@ struct thread
 	   Additionally, we add another integer that stores the
 	   first open spot of the fd table.*/
 
-	struct intr_frame parent_if;
-
    	struct file **fdTable;
-    	int fdIdx;
+    	int fdIndex;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
-	struct file *running;
+	/* Edited Code - Jinhyen Kim
+	   To deny writes to open files, we wish to track the file
+	      that the thread has it opened.
+	   For this, we store a pointer that points to the thread's
+	      running file. */
 
-	struct semaphore free_sema;
-	struct semaphore fork_sema;
+	struct file *threadFile;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+	/* Edited Code - Jinhyen Kim
+	   For the system call "fork", the project asks us to pass 
+	      the parent_if of a thread.
+	   To do this, we first define a thread element that will
+	      be used to store this information. */
+
+	struct intr_frame parent_if;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+	/* Edited Code - Jinhyen Kim
+	   For the system call "fork" and "wait", it is useful
+	      to have a list of all child threads of a parent thread.
+	   We will store this information using the list structure. */
+
+	struct list childThreadList;
+	struct list_elem childThreadElem;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+	
+	/* Edited Code - Jinhyen Kim
+	   1. For the system call "fork", the parent thread needs to wait
+	         for the child thread to load and return its status.
+	   2. For the system call "wait", the parent thread needs to wait
+	         for the child thread to close and return its status.
+	   3. For the system call "wait", the child thread needs to wait
+	         for the parent thread to successfully remove itself
+	         from the list of child threads. 
+	   To do all this, we define three separate semaphores. */
+
+	struct semaphore forkLock;
+	struct semaphore waitLock;
+	struct semaphore removeLock;	
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -220,8 +255,6 @@ void thread_print_stats(void);
 
 typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
-tid_t thread_create_tf(const char *name, int priority,
-					   thread_func *function, void *aux, struct intr_frame *tf);
 
 void thread_block(void);
 void thread_unblock(struct thread *);
@@ -253,8 +286,5 @@ This will wake up the threads that need to wake up by turnning the thread states
 THREAD_READY, and allocating them on the ready list
 by Jin-Hyuk Jang (project 1 - alarm clock) */
 void thread_wake(int64_t ticks);
-
-#define FDT_PAGES 3
-#define FDCOUNT_LIMIT FDT_PAGES * (1<<9)
 
 #endif /* threads/thread.h */

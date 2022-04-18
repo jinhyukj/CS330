@@ -73,7 +73,7 @@ void exit(int status) {
 	   (To store this, we added a new entity to the
 	      definition of the thread.) */
 
-	(*(thread_current ())).exit_status = status;
+	(*(thread_current ())).exitStatus = status;
 	printf("%s: exit(%d)\n", thread_name(), status);	
 	thread_exit();
 	return;
@@ -94,10 +94,10 @@ void checkUMA (void* userAddress) {
 	if (userAddress == NULL) {
 		exit(-1);
 	}
-	if (is_kernel_vaddr (userAddress)) {
+	if (!(is_user_vaddr(userAddress))) {
 		exit(-1);
 	}
-	if (pml4_get_page (((*(thread_current ())).pml4), userAddress) == NULL) {	
+	if (pml4_get_page(((*(thread_current ())).pml4), userAddress) == NULL) {	
 		exit(-1);
 	}
 	return;
@@ -109,6 +109,9 @@ void checkUMA (void* userAddress) {
 /* Edited Code - Jinhyen Kim*/
 
 pid_t fork (const char *thread_name, struct intr_frame *f) {
+
+	/* Edited Code - Jinhyen Kim
+	   fork() is performed at process.c. */
 
 	return process_fork(thread_name, f);
 
@@ -143,6 +146,9 @@ int exec (char *file_name) {
 }
 
 int wait (pid_t pid) {
+
+	/* Edited Code - Jinhyen Kim
+	   wait() is performed at process.c. */
 
 	return process_wait(pid);
 
@@ -208,15 +214,15 @@ int open(const char *file) {
 
 	struct file **fdt = (*(thread_current())).fdTable;
 
-	while ((*(thread_current())).fdIdx < FDCOUNT_LIMIT && fdt[(*(thread_current())).fdIdx])
-		(*(thread_current())).fdIdx = (*(thread_current())).fdIdx + 1;
+	while ((*(thread_current())).fdIndex < 1536 && fdt[(*(thread_current())).fdIndex])
+		(*(thread_current())).fdIndex = (*(thread_current())).fdIndex + 1;
 
-	if ((*(thread_current())).fdIdx >= FDCOUNT_LIMIT) {
+	if ((*(thread_current())).fdIndex >= 1536) {
 		returnValue = -1;
 	}
 	else {
-		fdt[(*(thread_current())).fdIdx] = targetFile;
-		returnValue = (*(thread_current())).fdIdx;
+		fdt[(*(thread_current())).fdIndex] = targetFile;
+		returnValue = (*(thread_current())).fdIndex;
 	}
 	
 	if (returnValue == -1)
@@ -231,7 +237,13 @@ int open(const char *file) {
 
 int filesize(int fd) {
 
-	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+	/* Edited Code - Jinhyen Kim
+	   This is invalid when either the fd index value is beyond the
+	      maximum value, or when there is no file at the given 
+	      fd index.
+	    Otherwise, we calculate file size through file_length(). */
+
+	if (fd < 0 || fd >= 1536)
 		return -1;
 
 	struct file *targetFile = (*(thread_current())).fdTable[fd];
@@ -249,8 +261,11 @@ int read(int fd, void *buffer, unsigned size) {
 	      the file location is a valid User Memory. */	
 	checkUMA(buffer);
 
+	/* This is invalid when either the fd index value is beyond the
+	      maximum value, or when there is no file at the given 
+	      fd index. */
 
-	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+	if (fd < 0 || fd >= 1536)
 		return -1;
 
 	struct file *targetFile = (*(thread_current())).fdTable[fd];
@@ -258,17 +273,29 @@ int read(int fd, void *buffer, unsigned size) {
 	if (targetFile == NULL)
 		return -1;
 
+	/* By our design, targetFile == 0 represents reading from 
+	      keyboard.
+	   As such, we call input_getc. */
 
-	if (targetFile == 1)
+	if (targetFile == 0)
 	{
 		*(char *)buffer = input_getc();
 		return size;
 	}
-	else if (targetFile == 2)
+
+	/* By our design, targetFile == 1 represents writing to the
+	      console.
+	   This is invalid for read(), so we return -1. */
+
+	else if (targetFile == 1)
 	{
 		return -1;
 	}
-	else{
+
+	/* Otherwise, we call file_read. */
+
+	else
+	{
 		/* While we work at a file, we need to lock it first. */
 		lock_acquire(&fileLock);
 
@@ -287,8 +314,11 @@ int write(int fd, const void *buffer, unsigned size) {
 	      the file location is a valid User Memory. */
 	checkUMA(buffer);
 
+	/* This is invalid when either the fd index value is beyond the
+	      maximum value, or when there is no file at the given 
+	      fd index. */
 
-	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+	if (fd < 0 || fd >= 1536)
 		return -1;
 
 	struct file *targetFile = (*(thread_current())).fdTable[fd];
@@ -296,16 +326,27 @@ int write(int fd, const void *buffer, unsigned size) {
 	if (targetFile == NULL)
 		return -1;
 
+	/* By our design, targetFile == 1 represents writing to the
+	      console.
+	   As such, we call putbuf. */
 	
-	if (targetFile == 2)
+	if (targetFile == 1)
 	{
 		putbuf(buffer, size);
 		return size;
 	}
-	else if (targetFile == 1)
+
+	/* By our design, targetFile == 0 represents reading from 
+	      keyboard.
+	   This is invalid for write(), so we return -1. */
+
+	else if (targetFile == 0)
 	{
 		return -1;
 	}
+
+	/* Otherwise, we call file_write. */
+
 	else
 	{
 		/* While we work at a file, we need to lock it first. */
@@ -322,7 +363,11 @@ int write(int fd, const void *buffer, unsigned size) {
 
 void seek(int fd, unsigned position) {
 
-	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+	/* This is invalid when either the fd index value is beyond the
+	      maximum value, or when there is no file at the given 
+	      fd index. */
+
+	if (fd < 0 || fd >= 1536)
 		return;
 	
 	struct file *targetFile = (*(thread_current())).fdTable[fd];
@@ -330,8 +375,13 @@ void seek(int fd, unsigned position) {
 	if (targetFile == NULL)
 		return;
 
-	if (targetFile <= 2)
+	/* targetFile < 2 represents reading from keyboard and writing
+	      to console, both of which are invalid for seek. */
+
+	if (targetFile < 2)
 		return;
+
+	/* Seek is done through file_seek. */
 
 	file_seek(targetFile, position);
 
@@ -339,7 +389,11 @@ void seek(int fd, unsigned position) {
 
 unsigned tell(int fd) {
 
-	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+	/* This is invalid when either the fd index value is beyond the
+	      maximum value, or when there is no file at the given 
+	      fd index. */
+
+	if (fd < 0 || fd >= 1536)
 		return;
 	
 	struct file *targetFile = (*(thread_current())).fdTable[fd];
@@ -347,8 +401,13 @@ unsigned tell(int fd) {
 	if (targetFile == NULL)
 		return;
 
-	if (targetFile <= 2)
+	/* targetFile < 2 represents reading from keyboard and writing
+	      to console, both of which are invalid for seek. */
+
+	if (targetFile < 2)
 		return;
+
+	/* Tell is done through file_tell. */
 
 	return file_tell(targetFile);
 
@@ -356,26 +415,27 @@ unsigned tell(int fd) {
 
 void close(int fd) {
 
-	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+	/* This is invalid when either the fd index value is beyond the
+	      maximum value, or when there is no file at the given 
+	      fd index. */
+
+	if (fd < 0 || fd >= 1536)
 		return;
 
 	struct file *targetFile = (*(thread_current())).fdTable[fd];
 
 	if (targetFile == NULL)
 		return;
-	
-	(*(thread_current())).fdTable[fd] = NULL;
 
+	/* We do not need to perform this for when fd == 0 or 1.
+	   (Special case reserved by pintos) */
 
-	if (fd <= 1 || targetFile <= 2)
+	if (fd < 2 || targetFile < 2)
 		return;
 
-	/*
-	if (targetFile -> dupCount == 0)
-		file_close(targetFile);
-	else
-		targetFile->dupCount--;
-	*/
+	/* Otherwise, we clear the fdTable. */
+
+	(*(thread_current())).fdTable[fd] = NULL;
 
 }
 
@@ -403,11 +463,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	SYS_WRITE,                  Write to a file.
 	SYS_SEEK,                   Change position in a file.
 	SYS_TELL,                   Report current position in a file.
-	SYS_CLOSE,                  Close a file.
-
-	Extra for Project 2:
-
-	SYS_DUP2,                   Duplicate the file descriptor */
+	SYS_CLOSE,                  Close a file. */
 
 	switch (((*(f)).R).rax) {
 

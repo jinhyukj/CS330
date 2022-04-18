@@ -212,15 +212,33 @@ tid_t thread_create(const char *name, int priority,
 	init_thread(t, name, priority);
 	tid = t->tid = allocate_tid();
 
-	list_push_back(&((*(thread_current())).child_list),&((*(t)).child_elem));
+	
+	/* Edited Code - Jinhyen Kim
+	   We perform two things here:
+	      1. We store the childThreadElem of t (child thread) 
+	            to the current thread (parent thread)'s list. 
+	      2. We initialize the fdTable of t. */
 
-    	t->fdTable = palloc_get_multiple(PAL_ZERO,FDT_PAGES);
-    	if (t->fdTable == NULL)
+	list_push_back(&((*(thread_current())).childThreadList),&((*(t)).childThreadElem));
+
+    	(*(t)).fdTable = palloc_get_multiple(PAL_ZERO, 3);
+
+    	if ((*(t)).fdTable == NULL)
         	return TID_ERROR;
-    	t->fdIdx = 2;
-   	t->fdTable[0] = 1;
-   	t->fdTable[1] = 2;
 
+	/* The first index value is set to be 2.
+	   This is because fd = 0 and 1 are already reserved 
+	      by pintos:
+	   fd = 0 reads from the keyboard,
+	   fd = 1 writes to the console.
+	   To represent these two cases, we define the value of 
+	      fdTable[0] as 0 and fdTable[1] as 1. */
+
+    	(*(t)).fdIndex = 2;
+   	(*(t)).fdTable[0] = 0;
+   	(*(t)).fdTable[1] = 1;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 
 	/* Call the kernel_thread if it scheduled.
@@ -257,49 +275,7 @@ tid_t thread_create(const char *name, int priority,
 
 	return tid;
 }
-tid_t thread_create_tf(const char *name, int priority,
-					   thread_func *function, void *aux, struct intr_frame *tf)
-{
-	struct thread *t;
-	tid_t tid;
 
-	ASSERT(function != NULL);
-
-	/* Allocate thread. */
-	t = palloc_get_page(PAL_ZERO);
-	if (t == NULL)
-		return TID_ERROR;
-
-	/* Initialize thread. */
-	init_thread(t, name, priority);
-	tid = t->tid = allocate_tid();
-
-	/* Call the kernel_thread if it scheduled.
-	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
-	t->tf.rip = (uintptr_t)kernel_thread;
-	t->tf.R.rdi = (uint64_t)function;
-	t->tf.R.rsi = (uint64_t)aux;
-	t->tf.R.rdx = (uint64_t)tf;
-	//printf("%p\n", t->tf.R.rdx);
-	t->tf.ds = SEL_KDSEG;
-	t->tf.es = SEL_KDSEG;
-	t->tf.ss = SEL_KDSEG;
-	t->tf.cs = SEL_KCSEG;
-	t->tf.eflags = FLAG_IF;
-	//hex_dump(&t->tf, &t->tf, sizeof(struct intr_frame), 1);
-	/* Add to run queue. */
-	thread_unblock(t);
-
-	if (!list_empty(&ready_list))
-	{
-		const struct thread *waiting = list_entry(list_front(&ready_list), struct thread, elem);
-		if (thread_current()->priority < waiting->priority)
-		{
-			thread_yield();
-		}
-	}
-	return tid;
-}
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
 
@@ -815,27 +791,32 @@ init_thread(struct thread *t, const char *name, int priority)
 	t->magic = THREAD_MAGIC;
 
 
+	/* Edited Code - Jinhyen Kim
+	   We create the childThreadList which will store all
+	      of the child threads of t. */
 
-	sema_init(&t->wait_sema,0);
-	list_init(&(t->child_list));
+	list_init(&((*t).childThreadList));
 
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 	/* Edited Code - Jinhyen Kim
 	   exitStatus - Status of termination.
 	   exitStatus of 0 indicates success,
 	   exitStatus of non-zero value indicates failure.*/
 
-	(*t).exit_status = 0;
+	(*t).exitStatus = 0;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
+	/* Edited Code - Jinhyen Kim
+	   We initialize the semaphores with 0 as these semaphores
+	      will be used for signalling. */
 
+	sema_init(&((*t).forkLock), 0);
+	sema_init(&((*t).removeLock), 0);
+	sema_init(&((*t).waitLock), 0);
 
-	sema_init(&t->fork_sema,0);
-	sema_init(&t->free_sema,0);
-
-
-	
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */	
 
 }
 

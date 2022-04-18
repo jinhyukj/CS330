@@ -54,8 +54,14 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	/* Edited Code - Jinhyen Kim 
+	   Argument passing reasons */
+
 	char *save_ptr;
 	strtok_r(file_name," ",&save_ptr);
+
+	/* Edited Code - Jinhyen Kim */
+
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
@@ -86,9 +92,9 @@ struct thread *pidSearch(int pid) {
 	struct thread *temp;
 	struct list_elem *e;
 
-	for (e = list_begin(&((*(thread_current())).child_list)); e != list_end(&((*(thread_current())).child_list)); e = list_next(e))
+	for (e = list_begin(&((*(thread_current())).childThreadList)); e != list_end(&((*(thread_current())).childThreadList)); e = list_next(e))
 	{
-		temp = list_entry(e, struct thread, child_elem);
+		temp = list_entry(e, struct thread, childThreadElem);
 
 		if ((*(temp)).tid == pid) {
 			return temp;
@@ -106,20 +112,33 @@ struct thread *pidSearch(int pid) {
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 
-	/* 전달받은 intr_frame을 현재 parent_if에 복사 */
+	/* Edited Code - Jinhyen Kim
+	   By our design, the thread now stores the parent_if. We use this to 
+	      copy the parent_if. */
+
 	memcpy(&((*(thread_current())).parent_if), if_, sizeof(struct intr_frame));
 
-	/* __do_fork를 실행하는 스레드 생성, 현재 스레드를 인자로 넘겨줌 */
+	/* To perform __do_fork, we create a new thread and pass the current thread
+	      as an argument. */
+
 	tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, thread_current());
 	if (tid == TID_ERROR)
 		return TID_ERROR;
 
 	struct thread *child = pidSearch(tid);
-	sema_down(&child->fork_sema); // wait until child loads
-	if (child->exit_status == -1)
+
+	/* To store the status of the child, we need to wait until the child thread
+	      completely loads in. */
+
+	sema_down(&child->forkLock);
+
+	if (child->exitStatus == -1)
 		return TID_ERROR;
 
 	return tid;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 }
 
 #ifndef VM
@@ -128,23 +147,25 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 static bool
 duplicate_pte (uint64_t *pte, void *va, void *aux) {
 
+	/* Edited Code - Jinhyen Kim */
+
 	struct thread *parent = (struct thread *) aux;
 	void *parent_page;
 	void *newpage;
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	if (is_kernel_vaddr(va))
+
+	if (!(is_user_vaddr(va)))
 	{
 		return true;
 	} 
+
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page (parent->pml4, va);
 
-	// parent_page = pml4_get_page (parent->pml4, va);
 	if (parent_page == NULL)
 	{
-		// printf("[fork-duplicate] failed to fetch page for user vaddr 'va'\n"); // #ifdef DEBUG
 		return false;
 	}
 
@@ -152,6 +173,7 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	 *    TODO: NEWPAGE. */
 
 	newpage = palloc_get_page(PAL_USER);
+
 	if (newpage == NULL)
 	{
 		return false;
@@ -161,17 +183,25 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
+
 	memcpy(newpage,parent_page, PGSIZE);
 	writable = is_writable(pte);
 
-
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
-	if (!pml4_set_page ((*(thread_current())).pml4, va, newpage, writable)) {
+
+	bool flag = pml4_set_page ((*(thread_current())).pml4, va, newpage, writable);
+
+	if (!(flag)) {
+
 		/* 6. TODO: if fail to insert page, do error handling. */
 		return false;
 	}
+
 	return true;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 }
 #endif
 
@@ -185,25 +215,8 @@ __do_fork (void *aux) {
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *) aux;
 
+	memcpy (&if_, &((*(parent)).parent_if), sizeof (struct intr_frame));
 
-
-	
-
-	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
-	struct intr_frame *parent_if;
-	bool succ = true;
-	
-	/* process_fork에서 복사 해두었던 intr_frame */
-	parent_if = &parent->parent_if;
-	
-	/* 1. Read the cpu context to local stack. */
-	
-	/* 부모의 intr_frame을 if_에 복사 */
-	memcpy (&if_, parent_if, sizeof (struct intr_frame));
-	/* if_의 리턴값을 0으로 설정? */
-	if_.R.rax = 0 ;
-
-	/* 2. Duplicate Page table */
 	(*(thread_current())).pml4 = pml4_create();
 	if ((*(thread_current())).pml4 == NULL)
 		goto error;
@@ -224,16 +237,19 @@ __do_fork (void *aux) {
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 
-	if (parent->fdIdx == FDCOUNT_LIMIT)
+	if (parent->fdIndex == 1536)
 		goto error;
 
-	for (int i = 0; i < FDCOUNT_LIMIT; i++)
+	for (int i = 0; i < 1536; i++)
 	{
 		struct file *file = parent->fdTable[i];
 		if (file == NULL)
 			continue;
 
-		if (file > 2) {
+		/* file == 0 and file == 1 represents reading from keyboard and 
+		      writing to console, so we cannot call file_duplicate for those. */
+
+		if (file > 1) {
 			(*(thread_current())).fdTable[i] = file_duplicate(file);
 		}
 		else {
@@ -242,24 +258,22 @@ __do_fork (void *aux) {
 
 	}
 	
+	if_.R.rax = 0 ;
 
-	(*(thread_current())).fdIdx = parent->fdIdx;
+	(*(thread_current())).fdIndex = parent->fdIndex;
 	
 	/* Finally, switch to the newly created process. */
 
-	sema_up(&((*(thread_current())).fork_sema));
+	sema_up(&((*(thread_current())).forkLock));
 
-	if (succ)
-		do_iret (&if_);
+	do_iret (&if_);
 
 error:
-	(*(thread_current())).exit_status = TID_ERROR;
-	sema_up(&((*(thread_current())).fork_sema));
+	(*(thread_current())).exitStatus = TID_ERROR;
+	sema_up(&((*(thread_current())).forkLock));
 	exit(TID_ERROR);
 
 }
-
-
 
 
 /* Edited Code by Jin-Hyuk Jang
@@ -390,12 +404,12 @@ process_wait (tid_t child_tid UNUSED) {
 		return -1;
 	}
 	else {
-		sema_down(&((*(targetThread)).wait_sema));
+		sema_down(&((*(targetThread)).waitLock));
 
-		int returnValue = (*(targetThread)).exit_status;
-		list_remove(&((*(targetThread)).child_elem));
+		int returnValue = (*(targetThread)).exitStatus;
+		list_remove(&((*(targetThread)).childThreadElem));
 	
-		sema_up(&((*(targetThread)).free_sema));
+		sema_up(&((*(targetThread)).removeLock));
 
 		return returnValue;
 
@@ -426,15 +440,15 @@ process_exit (void) {
 	   5. We wait for the parents at process_wait to remove the target thread from
 	         their list of child threads. */
 
-	for (int fd = 0; fd < FDCOUNT_LIMIT; fd = fd + 1) {
+	for (int fd = 0; fd < 1536; fd = fd + 1) {
 		close(fd);
 	}
-	palloc_free_multiple((*(thread_current())).fdTable, FDT_PAGES); 
-	file_close((*(thread_current())).running);
+	palloc_free_multiple((*(thread_current())).fdTable, 3); 
+	file_close((*(thread_current())).threadFile);
 	process_cleanup ();
 
-	sema_up(&((*(thread_current())).wait_sema));
-	sema_down(&((*(thread_current())).free_sema));
+	sema_up(&((*(thread_current())).waitLock));
+	sema_down(&((*(thread_current())).removeLock));
 	
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
@@ -569,7 +583,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	      any other processes from writing to this file. To do this,
 	      we store the file to the thread and call file_deny_write(). */
 
-	t->running = file;
+	(*(t)).threadFile = file;
 	
 	file_deny_write(file);
 
