@@ -212,6 +212,35 @@ tid_t thread_create(const char *name, int priority,
 	init_thread(t, name, priority);
 	tid = t->tid = allocate_tid();
 
+	
+	/* Edited Code - Jinhyen Kim
+	   We perform two things here:
+	      1. We store the childThreadElem of t (child thread) 
+	            to the current thread (parent thread)'s list. 
+	      2. We initialize the fdTable of t. */
+
+	list_push_back(&((*(thread_current())).childThreadList),&((*(t)).childThreadElem));
+
+    	(*(t)).fdTable = palloc_get_multiple(PAL_ZERO, 3);
+
+    	if ((*(t)).fdTable == NULL)
+        	return TID_ERROR;
+
+	/* The first index value is set to be 2.
+	   This is because fd = 0 and 1 are already reserved 
+	      by pintos:
+	   fd = 0 reads from the keyboard,
+	   fd = 1 writes to the console.
+	   To represent these two cases, we define the value of 
+	      fdTable[0] as 0 and fdTable[1] as 1. */
+
+    	(*(t)).fdIndex = 2;
+   	(*(t)).fdTable[0] = 0;
+   	(*(t)).fdTable[1] = 1;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t)kernel_thread;
@@ -760,6 +789,35 @@ init_thread(struct thread *t, const char *name, int priority)
 	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
 
 	t->magic = THREAD_MAGIC;
+
+
+	/* Edited Code - Jinhyen Kim
+	   We create the childThreadList which will store all
+	      of the child threads of t. */
+
+	list_init(&((*t).childThreadList));
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+	/* Edited Code - Jinhyen Kim
+	   exitStatus - Status of termination.
+	   exitStatus of 0 indicates success,
+	   exitStatus of non-zero value indicates failure.*/
+
+	(*t).exitStatus = 0;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+	/* Edited Code - Jinhyen Kim
+	   We initialize the semaphores with 0 as these semaphores
+	      will be used for signalling. */
+
+	sema_init(&((*t).forkLock), 0);
+	sema_init(&((*t).removeLock), 0);
+	sema_init(&((*t).waitLock), 0);
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */	
+
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

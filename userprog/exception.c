@@ -122,7 +122,7 @@ page_fault (struct intr_frame *f) {
 	bool write;        /* True: access was write, false: access was read. */
 	bool user;         /* True: access by user, false: access by kernel. */
 	void *fault_addr;  /* Fault address. */
-
+	//printf("page fault occured on intr_frame on this address:%p\n\n\n", &f);
 	/* Obtain faulting address, the virtual address that was
 	   accessed to cause the fault.  It may point to code or to
 	   data.  It is not necessarily the address of the instruction
@@ -155,6 +155,13 @@ page_fault (struct intr_frame *f) {
 			not_present ? "not present" : "rights violation",
 			write ? "writing" : "reading",
 			user ? "user" : "kernel");
-	kill (f);
+
+	/* Edited Code - Jinhyen Kim
+	   Now that we have the system call exit(), we can
+	      use it here. */
+	
+	exit(-1);
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 }
 

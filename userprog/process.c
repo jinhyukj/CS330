@@ -18,6 +18,8 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "userprog/process.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -26,6 +28,8 @@ static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
+
+void set_userStack(char **argv, int argc, void **rspp);
 
 /* General process initializer for initd and other process. */
 static void
@@ -50,6 +54,14 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	/* Edited Code - Jinhyen Kim 
+	   Argument passing reasons */
+
+	char *save_ptr;
+	strtok_r(file_name," ",&save_ptr);
+
+	/* Edited Code - Jinhyen Kim */
+
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
@@ -71,13 +83,62 @@ initd (void *f_name) {
 	NOT_REACHED ();
 }
 
+/* Edited Code - Jinhyen Kim
+   The following function takes a pid, and returns the child thread with the
+      same tid as the value of the pid, if any. */
+
+struct thread *pidSearch(int pid) {
+
+	struct thread *temp;
+	struct list_elem *e;
+
+	for (e = list_begin(&((*(thread_current())).childThreadList)); e != list_end(&((*(thread_current())).childThreadList)); e = list_next(e))
+	{
+		temp = list_entry(e, struct thread, childThreadElem);
+
+		if ((*(temp)).tid == pid) {
+			return temp;
+		}
+	}
+
+	return NULL;
+}
+
+/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
-	/* Clone current thread to new thread.*/
-	return thread_create (name,
-			PRI_DEFAULT, __do_fork, thread_current ());
+
+	/* Edited Code - Jinhyen Kim
+	   By our design, the thread now stores the parent_if. We use this to 
+	      copy the parent_if. */
+
+	memcpy(&((*(thread_current())).parent_if), if_, sizeof(struct intr_frame));
+
+	/* To perform __do_fork, we create a new thread and pass the current thread
+	      as an argument. */
+
+	tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, thread_current());
+	if (tid == TID_ERROR)
+		return TID_ERROR;
+
+	struct thread *child = pidSearch(tid);
+
+	/* To store the status of the child, we need to wait until the child thread
+	      completely loads in. */
+
+	sema_down(&child->forkLock);
+
+	if (child->exitStatus == -1)
+		return TID_ERROR;
+
+	return tid;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 }
 
 #ifndef VM
@@ -85,7 +146,9 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
  * pml4_for_each. This is only for the project 2. */
 static bool
 duplicate_pte (uint64_t *pte, void *va, void *aux) {
-	struct thread *current = thread_current ();
+
+	/* Edited Code - Jinhyen Kim */
+
 	struct thread *parent = (struct thread *) aux;
 	void *parent_page;
 	void *newpage;
@@ -93,22 +156,52 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
 
+	if (!(is_user_vaddr(va)))
+	{
+		return true;
+	} 
+
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page (parent->pml4, va);
 
+	if (parent_page == NULL)
+	{
+		return false;
+	}
+
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
+
+	newpage = palloc_get_page(PAL_USER);
+
+	if (newpage == NULL)
+	{
+		return false;
+	}
+
 
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
 
+	memcpy(newpage,parent_page, PGSIZE);
+	writable = is_writable(pte);
+
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
-	if (!pml4_set_page (current->pml4, va, newpage, writable)) {
+
+	bool flag = pml4_set_page ((*(thread_current())).pml4, va, newpage, writable);
+
+	if (!(flag)) {
+
 		/* 6. TODO: if fail to insert page, do error handling. */
+		return false;
 	}
+
 	return true;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 }
 #endif
 
@@ -118,25 +211,20 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  *       this function. */
 static void
 __do_fork (void *aux) {
+	
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *) aux;
-	struct thread *current = thread_current ();
-	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
-	struct intr_frame *parent_if;
-	bool succ = true;
 
-	/* 1. Read the cpu context to local stack. */
-	memcpy (&if_, parent_if, sizeof (struct intr_frame));
+	memcpy (&if_, &((*(parent)).parent_if), sizeof (struct intr_frame));
 
-	/* 2. Duplicate PT */
-	current->pml4 = pml4_create();
-	if (current->pml4 == NULL)
+	(*(thread_current())).pml4 = pml4_create();
+	if ((*(thread_current())).pml4 == NULL)
 		goto error;
 
-	process_activate (current);
+	process_activate(thread_current());
 #ifdef VM
-	supplemental_page_table_init (&current->spt);
-	if (!supplemental_page_table_copy (&current->spt, &parent->spt))
+	supplemental_page_table_init (&((*(thread_current())).spt));
+	if (!supplemental_page_table_copy (&((*(thread_current())).spt, &parent->spt)))
 		goto error;
 #else
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent))
@@ -149,14 +237,44 @@ __do_fork (void *aux) {
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 
-	process_init ();
+	if (parent->fdIndex == 1536)
+		goto error;
 
+	for (int i = 0; i < 1536; i++)
+	{
+		struct file *file = parent->fdTable[i];
+		if (file == NULL)
+			continue;
+
+		/* file == 0 and file == 1 represents reading from keyboard and 
+		      writing to console, so we cannot call file_duplicate for those. */
+
+		if (file > 1) {
+			(*(thread_current())).fdTable[i] = file_duplicate(file);
+		}
+		else {
+			(*(thread_current())).fdTable[i] = file;
+		}
+
+	}
+	
+	if_.R.rax = 0 ;
+
+	(*(thread_current())).fdIndex = parent->fdIndex;
+	
 	/* Finally, switch to the newly created process. */
-	if (succ)
-		do_iret (&if_);
+
+	sema_up(&((*(thread_current())).forkLock));
+
+	do_iret (&if_);
+
 error:
-	thread_exit ();
+	(*(thread_current())).exitStatus = TID_ERROR;
+	sema_up(&((*(thread_current())).forkLock));
+	exit(TID_ERROR);
+
 }
+
 
 /* Edited Code by Jin-Hyuk Jang
 We add function "argumemnt_stack" in order to add arguments and address values to user stack */
@@ -179,7 +297,7 @@ void argument_to_stack(char **args, int count, struct intr_frame *if_){
 		if_->rsp -= 8;
 
 		if (i != count)
-			memset(if_ -> rsp, &address_list[i], sizeof(char **));
+			memcpy(if_ -> rsp, &address_list[i], sizeof(char **));
 
 		else
 			memset(if_ -> rsp, 0, sizeof(char **));	
@@ -200,6 +318,7 @@ process_exec (void *f_name) {
 	char *file_name = f_name;
 	bool success;
 
+
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
@@ -218,14 +337,13 @@ process_exec (void *f_name) {
 	char *save_ptr;
 
 	char *copied_file_name[48];
-	/* Edited Code by Jin-Hyuk Jang (project 2 - argument passing)*/
-	
+
+
 	/*Edited Code by Jin-Hyuk Jang
 	We copy the file with the name f_name in order to parse it without damaging the original*/
 	memcpy(copied_file_name, file_name, strlen(file_name) + 1);
-	/*Edited Code by Jin-Hyuk Jang (project 2 - argument passing)*/
-	
-	
+
+
 	/* Edited Code by Jin-Hyuk Jang 
 	Since f_name is actually the file name with the arguments, we must parse it.
 	For every blank space, we divide the copied_file_name and put each segment into a list using strtok*/
@@ -234,27 +352,27 @@ process_exec (void *f_name) {
 	 	argc++;
 	}
 
-
 	/* We first kill the current context */
 	process_cleanup ();
 
 	/* And then load the binary */
-	success = load (file_name, &_if);
+	success = load (argv[0], &_if);
+
+	/* If load failed, quit. */
+	if (!success)
+		return -1;
 
 	/* Edited Code by Jin-Hyuk Jang 
 	We add argument_stack function to add arguments and address values to stack */
 	argument_to_stack(argv, argc, &_if);
-	
-
-	/* If load failed, quit. */
-	palloc_free_page (file_name);
-	if (!success)
-		return -1;
 
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
 }
+
+
+
 
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -268,22 +386,72 @@ process_exec (void *f_name) {
  * does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
-	return -1;
+
+
+	/* Edited Code - Jinhyen Kim
+	   1. We search our list of child threads to see if any of them shares the same
+	         tid as our pid value. If this is the case, we need to wait for the 
+	         child thread to shut down. Otherwise, we can return.
+	   2. We wait for the child thread to shut down.
+	   3. We receive the exit status, and remove the child thread from our list of 
+	         child threads.
+	   4. We signal the child thread that we have removed them from the list.
+	   5. We return the exit status of the child thread. */
+
+	struct thread *targetThread = pidSearch(child_tid);
+
+	if(targetThread == NULL) {
+		return -1;
+	}
+	else {
+		sema_down(&((*(targetThread)).waitLock));
+
+		int returnValue = (*(targetThread)).exitStatus;
+		list_remove(&((*(targetThread)).childThreadElem));
+	
+		sema_up(&((*(targetThread)).removeLock));
+
+		return returnValue;
+
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
+
 }
 
 /* Exit the process. This function is called by thread_exit (). */
 void
 process_exit (void) {
-	struct thread *curr = thread_current ();
+
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	
 
+
+	/* Edited Code - Jinhyen Kim
+	   1. We close all the files that are open under the file descriptor table. 
+	   2. We close the file of the target thread. 
+	   3. We call process_cleanup().
+	   4. We signal the parents at process_wait() that the child thread has closed
+	         and that they can now retrieve the exit status. 
+	   5. We wait for the parents at process_wait to remove the target thread from
+	         their list of child threads. */
+
+	for (int fd = 0; fd < 1536; fd = fd + 1) {
+		close(fd);
+	}
+	palloc_free_multiple((*(thread_current())).fdTable, 3); 
+	file_close((*(thread_current())).threadFile);
 	process_cleanup ();
+
+	sema_up(&((*(thread_current())).waitLock));
+	sema_down(&((*(thread_current())).removeLock));
+	
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 }
 
 /* Free the current process's resources. */
@@ -317,6 +485,7 @@ process_cleanup (void) {
  * This function is called on every context switch. */
 void
 process_activate (struct thread *next) {
+
 	/* Activate thread's page tables. */
 	pml4_activate (next->pml4);
 
@@ -409,6 +578,17 @@ load (const char *file_name, struct intr_frame *if_) {
 		goto done;
 	}
 
+	/* Edited Code - Jinhyen Kim
+	   Since the thread now has a file running, we need to prevent 
+	      any other processes from writing to this file. To do this,
+	      we store the file to the thread and call file_deny_write(). */
+
+	(*(t)).threadFile = file;
+	
+	file_deny_write(file);
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
+
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
 			|| memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7)
@@ -484,11 +664,18 @@ load (const char *file_name, struct intr_frame *if_) {
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
 
+	
+	/* Edited Code - Jinhyen Kim
+	   We delegate the file closing process to when we call
+	      process_exit() instead. */
+
 	success = true;
+
+	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
+
 	return success;
 }
 
