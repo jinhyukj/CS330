@@ -4,6 +4,17 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 
+/* Edited Code - Jinhyen Kim 
+   To store and manage all of the frames, we create a 
+      list of frames as well as the list_elem to use 
+      for the list. */
+
+struct list frameTable;
+struct list_elem *frameElem;
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -16,6 +27,16 @@ vm_init (void) {
 	register_inspect_intr ();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
+
+	/* Edited Code - Jinhyen Kim 
+	   When a virtual machine is initialized, we need to initialize the 
+	      frame table as well. */
+
+	list_init(&(frameTable));
+	/* list_elem = list_begin(&(frameTable)); */
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -54,7 +75,41 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
 
+		/* Edited Code - Jinhyen Kim
+		   1. To create a new page, we first need to get memory allocation for
+		         the page with malloc(). 
+		   2. Once we have the memory space, we define a new page with the
+		         given VM type. 
+		   3. Depending on the VM type, we use a different initializer. 
+		   4. Then, we create a new uninit page by calling uninit_new(). 
+		         For the new uninitialized page, we set its "writable"
+		         status as given by the function, as well as its 
+		         current thread. */
+
+		struct page *newUninitPage = malloc(sizeof(struct page));
+		
+		bool (*pageInit) (struct page *, enum vm_type);
+
+		if (VM_TYPE(type) == VM_FILE) {
+			pageInit = file_backed_initializer;
+		}
+		else if (VM_TYPE(type) == VM_ANON) {
+			pageInit = anon_initializer;
+		}
+
+		uninit_new(newUninitPage, upage, init, type, aux, pageInit);
+
+		(*(newUninitPage)).writable = writable;
+		(*(newUninitPage)).thread = thread_current();
+
 		/* TODO: Insert the page into the spt. */
+
+		spt_insert_page(spt, newUninitPage);
+
+		return true;
+
+		/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 	}
 err:
 	return false;

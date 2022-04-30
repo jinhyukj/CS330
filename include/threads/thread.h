@@ -235,6 +235,13 @@ struct thread
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
+
+	/* Edited Code - Jinhyen Kim
+	   For VM, we also use a pointer stack_bottom that points to the 
+	      bottom of the stack. */
+	void *stack_bottom;
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 #endif
 
 	/* Owned by thread.c. */
