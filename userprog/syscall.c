@@ -89,22 +89,73 @@ void exit(int status) {
       3: When the pointer is pointer to Kernel virtual memory address space
    For these three cases, we terminate the user process.*/
 
-void checkUMA (void* userAddress) {
+struct page *checkUMA (void* userAddress) {
 
 	if (userAddress == NULL) {
 		exit(-1);
 	}
-	if (!(is_user_vaddr(userAddress))) {
+	else if (!(is_user_vaddr(userAddress))) {
 		exit(-1);
 	}
+
+	/* Edited Code - Jinhyen Kim
+	   This function is further edited in project 3 as 
+	      checkUMA now needs to check the mapping of a virtual memory
+	      through spt_find_page.
+	   Additionally, it now returns the page returned by the function
+	      spt_find_page. */
+
 	if (pml4_get_page(((*(thread_current ())).pml4), userAddress) == NULL) {	
 		exit(-1);
 	}
-	return;
+
+	else {
+		struct page *page = spt_find_page(&((*(thread_current())).spt), userAddress);
+
+		if (page == NULL) {
+			exit(-1);
+		}
+		else {
+			return page;
+		}
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 }
 
 /* Edited Code - Jinhyen Kim (Project 2 - User Memory) */
+
+/* Edited Code - Jinhyen Kim
+   For the system call read, we need to ensure that the 
+      buffer memory used to read data is a valid virtual address. 
+   In addition, this buffer memory should also allow writes.
+      (writable must be true) */
+
+void checkReadBuffer (void *buffer, unsigned size) {
+
+	for (int i = 0; i < size; i++) {
+		struct page *page = checkUMA(buffer + i);
+		if ((*(page)).writable == false) {
+			exit(-1);
+		}
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
+/* Edited Code - Jinhyen Kim
+   For the system call write, we need to ensure that the 
+      buffer memory used to write data is a valid virtual address. */
+
+void checkWriteBuffer (void *buffer, unsigned size) {
+
+	for (int i = 0; i < size; i++) {
+		struct page *page = checkUMA(buffer + i);
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 /* Edited Code - Jinhyen Kim*/
 
@@ -516,11 +567,13 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 		case SYS_READ:
 
+			checkReadBuffer((((*(f)).R).rsi), (((*(f)).R).rdx)); 
 			(((*(f)).R).rax) = read((((*(f)).R).rdi), (((*(f)).R).rsi), (((*(f)).R).rdx));
 			break;
 
 		case SYS_WRITE:
 
+			checkWriteBuffer((((*(f)).R).rsi), (((*(f)).R).rdx)); 
 			(((*(f)).R).rax) = write((((*(f)).R).rdi), (((*(f)).R).rsi), (((*(f)).R).rdx));
 			break;
 

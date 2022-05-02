@@ -3,6 +3,7 @@
 #include "threads/malloc.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
+#include "threads/vaddr.h"
 
 /* Edited Code - Jinhyen Kim 
    To store and manage all of the frames, we create a 
@@ -174,7 +175,8 @@ vm_get_frame (void) {
 }
 
 /* Growing the stack. */
-static void
+//static void
+static bool
 vm_stack_growth (void *addr UNUSED) {
 }
 
@@ -188,11 +190,60 @@ bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
 	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
-	struct page *page = NULL;
+
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 
-	return vm_do_claim_page (page);
+	/* Edited Code - Jinhyen Kim
+	   Before we declare *page, we need to check for two cases where
+	      we should immediately return the function instead.
+	   1. If the page address is not user address, it is invalid.
+	   2. Alternatively, if not_present is false, then it is
+	         also invalid. */
+
+	if (!(is_user_vaddr(addr))) {
+		return false;
+	}
+	else if (!(not_present)) {
+		return false;
+	}
+
+	/* Now, we can declare *page. */
+
+	struct page *page = spt_find_page(spt, addr);
+
+	/* If we are in user mode, rsp is provided by the interrupt frame.
+	   If we are in the kernel mode, rsp is provided by the current 
+	      thread's stored user rsp instead. */
+
+	void *rsp = NULL;
+	if (user) {
+		rsp = (*(f)).rsp;
+	}
+	else {
+		rsp = (*(thread_current())).currentRsp;
+	}
+
+	if (page == NULL) {
+
+		/**/
+		if ((USER_STACK > addr) && (addr >= (USER_STACK - (1<<20))) && (addr >= rsp - 10)) {
+
+			void *fpage = ((*(thread_current())).stack_bottom) - PGSIZE;
+
+			if (vm_stack_growth (fpage)) {
+				page = spt_find_page(spt, fpage);
+				return vm_do_claim_page (page);
+			} 
+		}
+
+		return false;
+	}
+	else {
+		return vm_do_claim_page (page);
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 }
 
 /* Free the page.
