@@ -145,6 +145,16 @@ struct thread
 
 	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
+	/*by Jin-Hyuk Jang
+	We add the spt structure in thre thread structure
+	This is because each thread has a different supplemental page table*/
+	struct supplemental_page_table *supplemental_page_table;
+	/*by Jin-Hyuk Jang*/
+
+	/*by Jin-Hyuk Jang*/
+	uint64_t *pml4_p;
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
 	/*Edited by Jin-Hyuk Jang
 	We now add "nice" and "recent_cpu" to thread structure.
 	"nice": An integer ranging from -20 to 20. In default, it is 0, but it also depends on what "nice" value the parent thread has.
@@ -159,15 +169,13 @@ struct thread
 
 	/*Edited by Jin-Hyuk Jang(Project 1 - advanced scheduler)*/
 
-
-
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4; /* Page map level 4 */
 #endif
 
 	/* Edited Code - Jinhyen Kim
-	   For SYS_EXIT, We need to store the status of termination 
+	   For SYS_EXIT, We need to store the status of termination
 	   to return at SYS_WAIT.
 	   exitStatus of 0 indicates success,
 	   exitStatus of non-zero value indicates failure.*/
@@ -179,30 +187,30 @@ struct thread
 	/* Edited Code - Jinhyen Kim
 	   To implement File Descriptor, we need to have a storage
 	   space for the fd's.
-	   The pointer fdTable points to the table storing all fd's. 
+	   The pointer fdTable points to the table storing all fd's.
 	   Additionally, we add another integer that stores the
 	   first open spot of the fd table.*/
 
-   	struct file **fdTable;
-    	int fdIndex;
+	struct file **fdTable;
+	int fdIndex;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 	/* Edited Code - Jinhyen Kim
 	   To deny writes to open files, we wish to track the file
-	      that the thread has it opened.
+		  that the thread has it opened.
 	   For this, we store a pointer that points to the thread's
-	      running file. */
+		  running file. */
 
 	struct file *threadFile;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
 	/* Edited Code - Jinhyen Kim
-	   For the system call "fork", the project asks us to pass 
-	      the parent_if of a thread.
+	   For the system call "fork", the project asks us to pass
+		  the parent_if of a thread.
 	   To do this, we first define a thread element that will
-	      be used to store this information. */
+		  be used to store this information. */
 
 	struct intr_frame parent_if;
 
@@ -210,27 +218,27 @@ struct thread
 
 	/* Edited Code - Jinhyen Kim
 	   For the system call "fork" and "wait", it is useful
-	      to have a list of all child threads of a parent thread.
+		  to have a list of all child threads of a parent thread.
 	   We will store this information using the list structure. */
 
 	struct list childThreadList;
 	struct list_elem childThreadElem;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
-	
+
 	/* Edited Code - Jinhyen Kim
 	   1. For the system call "fork", the parent thread needs to wait
-	         for the child thread to load and return its status.
+			 for the child thread to load and return its status.
 	   2. For the system call "wait", the parent thread needs to wait
-	         for the child thread to close and return its status.
+			 for the child thread to close and return its status.
 	   3. For the system call "wait", the child thread needs to wait
-	         for the parent thread to successfully remove itself
-	         from the list of child threads. 
+			 for the parent thread to successfully remove itself
+			 from the list of child threads.
 	   To do all this, we define three separate semaphores. */
 
 	struct semaphore forkLock;
 	struct semaphore waitLock;
-	struct semaphore removeLock;	
+	struct semaphore removeLock;
 
 	/* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 

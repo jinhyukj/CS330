@@ -1,0 +1,37 @@
+Kernel command line: -q -f put swap-fork put child-swap run swap-fork
+0 ~ 9fc00 1
+100000 ~ 27e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x27e0000 (Usable: 39,808 kB)
+Calibrating timer...  157,081,600 loops/s.
+hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 4,119 sector (2 MB) disk, model "QEMU HARDDISK", serial "QM00003"
+hd1:1: detected 403,200 sector (196 MB) disk, model "QEMU HARDDISK", serial "QM00004"
+Formatting file system...done.
+Boot complete.
+Putting 'swap-fork' into the file system...
+Putting 'child-swap' into the file system...
+Executing 'swap-fork':
+Interrupt 0x06 (#UD Invalid Opcode Exception) at rip=8004253008
+ cr2=0000000000000000 error=               0
+rax 0000008004253000 rbx 0000000000000000 rcx 000000800424f000 rdx 000000800424e958
+rsp 000000800424e8d8 rbp 000000800424e900 rsi 000000800424f000 rdi 000000800424e958
+rip 0000008004253008 r8 0000000000000000  r9 0000000000000000 r10 0000000000000000
+r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
+r15 0000000000000000 rflags 00000246
+es: 0010 ds: 0010 cs: 0008 ss: 0010
+Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
+Call stack: 0x800421892a 0x800421d43d 0x8004209677 0x8004209a95 0x800421b0f5 0x8004221491 0x8004221445 0x800421d053 0x800421cd4a 0x800421c773 0x800421bfa7 0x8004207fa0.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 181 ticks
+Thread: 45 idle ticks, 133 kernel ticks, 3 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 66 reads, 8276 writes
+hd1:0: 4119 reads, 0 writes
+hd1:1: 0 reads, 0 writes
+Console: 1869 characters output
+Key

@@ -28,6 +28,7 @@ enum vm_type
 #include "vm/uninit.h"
 #include "vm/anon.h"
 #include "vm/file.h"
+#include <hash.h>
 #ifdef EFILESYS
 #include "filesys/page_cache.h"
 #endif
@@ -49,6 +50,16 @@ struct page
 
 	/* Your implementation */
 
+	/*by JinHyuk Jang
+	give page structure list_elem to use hash table*/
+	struct hash_elem hash_elem;
+	/*by JinHyuk Jang - project 3 (memory management)*/
+
+	/*by Jin-Hyuk Jang
+	We need the writable field to see if page is actually writable*/
+	bool writable;
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
 	union
@@ -67,6 +78,7 @@ struct frame
 {
 	void *kva;
 	struct page *page;
+	struct list_elem elem;
 };
 
 /* The function table for page operations.

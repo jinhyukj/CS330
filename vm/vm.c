@@ -4,6 +4,7 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include <hash.h>
+#include "include/threads/vaddr.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -40,6 +41,8 @@ static struct frame *vm_get_victim(void);
 static bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
 
+struct list frame_table;
+
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
  * `vm_alloc_page`. */
@@ -49,7 +52,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 
 	ASSERT(VM_TYPE(type) != VM_UNINIT)
 
-	struct supplemental_page_table *spt = &thread_current()->spt;
+	struct supplemental_page_table *spt = &thread_current()->supplemental_page_table;
 
 	/* Check wheter the upage is already occupied or not. */
 	if (spt_find_page(spt, upage) == NULL)
@@ -71,6 +74,21 @@ spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED)
 	struct page *page = NULL;
 	/* TODO: Fill this function. */
 
+	/*by Jin-Hyuk Jang
+	We get a page that has the virtual address that we are looking for
+	Then we use hash_find function to find the hash_elem if it exists in the hash_table
+	If it does, we return the page with the hash_elem, if not we return NULL*/
+	struct page return_page;
+	return_page.va = pg_round_down(va);
+	struct hash_elem *e;
+
+	e = hash_find(&spt->page_hash_table, &return_page.hash_elem);
+
+	if (e == NULL)
+		return NULL;
+
+	page = hash_entry(e, struct page, hash_elem);
+	/*by Jin-Hyuk Jang - project 3 (memeory management)*/
 	return page;
 }
 
@@ -81,6 +99,17 @@ bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
 	int succ = false;
 	/* TODO: Fill this function. */
 
+	/*by Jin-Hyuk Jang
+	We have to check if the hash_elem of the page that we're trying to insert
+	is already in the hash table. Therefore, we use hash_find to get the hash_elem,
+	and if it does exist, we return false.
+	If not, we use hash_insert to insert the given hash_elem into the hash table.*/
+	struct hash_elem *e = hash_find(&spt->page_hash_table, &page->hash_elem);
+	if (e != NULL)
+		return succ;
+
+	hash_insert(&spt->page_hash_table, &page->hash_elem);
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 	return succ;
 }
 
@@ -97,6 +126,11 @@ vm_get_victim(void)
 	struct frame *victim = NULL;
 	/* TODO: The policy for eviction is up to you. */
 
+	/*by Jin-Hyuk Jang
+	we get the victim frame from the frame table*/
+	victim = list_entry(list_pop_front(&frame_table), struct frame, elem);
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
 	return victim;
 }
 
@@ -107,6 +141,14 @@ vm_evict_frame(void)
 {
 	struct frame *victim UNUSED = vm_get_victim();
 	/* TODO: swap out the victim and return the evicted frame. */
+
+	/*by Jin-Hyuk Jang
+	We swap out the frame that isn't used from swap table*/
+	if (victim->page != NULL)
+	{
+		swap_out(victim->page);
+	}
+	/*by Jin-Hyuk Jang - project3 (memory management)*/
 
 	return NULL;
 }
@@ -120,9 +162,27 @@ vm_get_frame(void)
 {
 	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
+	/*by Jin-Hyuk Jang
+	We need to get a physical page from the USER pool.
+	Therefore we use palloc_get_page to get a new physical page.
+	Then, if the physical page is not null, we create a new frame and address
+	the kva of the frame to the physical page.
+	If the physical page is null, then we get a frame that is not used.*/
+	void *physical_page = palloc_get_page(PAL_USER);
 
+	if (physical_page != NULL)
+	{
+		frame = malloc(sizeof(struct frame));
+		frame->kva = physical_page;
+	}
+	else
+	{
+		frame = vm_evict_frame();
+	}
 	ASSERT(frame != NULL);
-	ASSERT(frame->page == NULL);
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
+	// ASSERT(frame->page == NULL);
 	return frame;
 }
 
@@ -142,7 +202,7 @@ vm_handle_wp(struct page *page UNUSED)
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
 {
-	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
+	struct supplemental_page_table *spt UNUSED = &thread_current()->supplemental_page_table;
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
@@ -164,6 +224,16 @@ bool vm_claim_page(void *va UNUSED)
 	struct page *page = NULL;
 	/* TODO: Fill this function */
 
+	/*by Jin-Hyuk Jang
+	We get a page with from suggested va, and use vm_do_claim_page to assign in to frame*/
+	struct supplemental_page_table *spt = &thread_current()->supplemental_page_table;
+	page = spt_find_page(spt, va);
+	if (page == NULL)
+	{
+		return false;
+	}
+	/*by Jin-Hyuk Jang - project 3 (memeory management)*/
+
 	return vm_do_claim_page(page);
 }
 
@@ -178,6 +248,10 @@ vm_do_claim_page(struct page *page)
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
+	/*by jin-Hyuk Jang*/
+	struct thread *cur = thread_current();
+	bool writable = page->writable;
+	pml4_set_page(cur->pml4_p, page->va, frame->kva, writable);
 
 	return swap_in(page, frame->kva);
 }
@@ -199,7 +273,7 @@ unsigned hash_less(const struct hash_elem *a, const struct hash_elem *b, void *a
 {
 	const struct page *pa = hash_entry(a, struct page, hash_elem);
 	const struct page *pb = hash_entry(b, struct page, hash_elem);
-	return a->va < b->va;
+	return pa->va < pb->va;
 }
 /*by Jin-Hyuk Jang - project 3 (memory management)*/
 
