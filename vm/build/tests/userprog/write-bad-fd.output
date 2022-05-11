@@ -4,7 +4,7 @@ Kernel command line: -q -f put write-bad-fd run write-bad-fd
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  157,081,600 loops/s.
+Calibrating timer...  117,760,000 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 103 sector (51 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -13,24 +13,17 @@ Formatting file system...done.
 Boot complete.
 Putting 'write-bad-fd' into the file system...
 Executing 'write-bad-fd':
-Interrupt 0x06 (#UD Invalid Opcode Exception) at rip=8004249008
- cr2=0000000000000000 error=               0
-rax 0000008004249000 rbx 0000000000000000 rcx 0000008004245000 rdx 0000008004244958
-rsp 00000080042448d8 rbp 0000008004244900 rsi 0000008004245000 rdi 0000008004244958
-rip 0000008004249008 r8 0000000000000000  r9 0000000000000000 r10 0000000000000000
-r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
-r15 0000000000000000 rflags 00000246
-es: 0010 ds: 0010 cs: 0008 ss: 0010
-Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x800421892a 0x800421d43d 0x8004209677 0x8004209a95 0x800421b0f5 0x8004221491 0x8004221445 0x800421d053 0x800421cd4a 0x800421c773 0x800421bfa7 0x8004207fa0.
+Kernel PANIC at ../../userprog/process.c:84 in initd(): Fail to launch initd
+
+Call stack: 0x8004218906 0x800421bfbc 0x8004207f82.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 82 ticks
-Thread: 32 idle ticks, 48 kernel ticks, 2 user ticks
+Timer: 86 ticks
+Thread: 34 idle ticks, 51 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 39 reads, 234 writes
 hd1:0: 103 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1812 characters output
+Console: 1155 characters output
 Key

@@ -145,16 +145,6 @@ struct thread
 
 	/* Edited Code - Jinhyen Kim (Project 1 - Priority Donation) */
 
-	/*by Jin-Hyuk Jang
-	We add the spt structure in thre thread structure
-	This is because each thread has a different supplemental page table*/
-	struct supplemental_page_table *supplemental_page_table;
-	/*by Jin-Hyuk Jang*/
-
-	/*by Jin-Hyuk Jang*/
-	uint64_t *pml4_p;
-	/*by Jin-Hyuk Jang - project 3 (memory management)*/
-
 	/*Edited by Jin-Hyuk Jang
 	We now add "nice" and "recent_cpu" to thread structure.
 	"nice": An integer ranging from -20 to 20. In default, it is 0, but it also depends on what "nice" value the parent thread has.

@@ -1,16 +1,7 @@
 FAIL
-Kernel panic in run: PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x800421892a 0x800421d43d 0x8004209677 0x8004209a95 0x800421b0f5 0x8004221491 0x8004221445 0x800421d053 0x800421cd4a 0x800421c773 0x800421bfa7 0x8004207fa0
+Kernel panic in run: PANIC at ../../userprog/process.c:84 in initd(): Fail to launch initd
+Call stack: 0x8004218906 0x800421bfbc 0x8004207f82
 Translation of call stack:
-0x000000800421892a: debug_panic (lib/kernel/debug.c:32)
-0x000000800421d43d: kill (userprog/exception.c:103)
-0x0000008004209677: intr_handler (threads/interrupt.c:352)
-0x0000008004209a95: intr_entry (threads/intr-stubs.o:?)
-0x000000800421b0f5: hash_find (lib/kernel/hash.c:124)
-0x0000008004221491: spt_find_page (vm/vm.c:85)
-0x0000008004221445: vm_alloc_page_with_initializer (vm/vm.c:66)
-0x000000800421d053: load_segment (userprog/process.c:875)
-0x000000800421cd4a: load (userprog/process.c:646)
-0x000000800421c773: process_exec (userprog/process.c:359)
-0x000000800421bfa7: initd (userprog/process.c:83)
-0x0000008004207fa0: kernel_thread (threads/thread.c:740)
+0x0000008004218906: debug_panic (lib/kernel/debug.c:32)
+0x000000800421bfbc: initd (userprog/process.c:85)
+0x0000008004207f82: kernel_thread (threads/thread.c:740)

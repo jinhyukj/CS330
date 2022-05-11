@@ -52,7 +52,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 
 	ASSERT(VM_TYPE(type) != VM_UNINIT)
 
-	struct supplemental_page_table *spt = &thread_current()->supplemental_page_table;
+	struct supplemental_page_table *spt = &thread_current()->spt;
 
 	/* Check wheter the upage is already occupied or not. */
 	if (spt_find_page(spt, upage) == NULL)
@@ -128,7 +128,17 @@ vm_get_victim(void)
 
 	/*by Jin-Hyuk Jang
 	we get the victim frame from the frame table*/
-	victim = list_entry(list_pop_front(&frame_table), struct frame, elem);
+	struct thread *curr = thread_current();
+	struct list_elem *e;
+
+	for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
+	{
+		victim = list_entry(e, struct frame, elem);
+		if (pml4_is_accessed(curr->pml4, victim->page->va))
+			pml4_set_accessed(curr->pml4, victim->page->va, 0);
+		else
+			return victim;
+	}
 	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 
 	return victim;
@@ -150,7 +160,7 @@ vm_evict_frame(void)
 	}
 	/*by Jin-Hyuk Jang - project3 (memory management)*/
 
-	return NULL;
+	return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -180,6 +190,8 @@ vm_get_frame(void)
 		frame = vm_evict_frame();
 	}
 	ASSERT(frame != NULL);
+
+	list_push_back(&frame_table, &frame->elem);
 	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 
 	// ASSERT(frame->page == NULL);
@@ -202,7 +214,7 @@ vm_handle_wp(struct page *page UNUSED)
 bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
 {
-	struct supplemental_page_table *spt UNUSED = &thread_current()->supplemental_page_table;
+	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
@@ -226,7 +238,7 @@ bool vm_claim_page(void *va UNUSED)
 
 	/*by Jin-Hyuk Jang
 	We get a page with from suggested va, and use vm_do_claim_page to assign in to frame*/
-	struct supplemental_page_table *spt = &thread_current()->supplemental_page_table;
+	struct supplemental_page_table *spt = &thread_current()->spt;
 	page = spt_find_page(spt, va);
 	if (page == NULL)
 	{
@@ -251,9 +263,12 @@ vm_do_claim_page(struct page *page)
 	/*by jin-Hyuk Jang*/
 	struct thread *cur = thread_current();
 	bool writable = page->writable;
-	pml4_set_page(cur->pml4_p, page->va, frame->kva, writable);
+	if (pml4_set_page(cur->pml4, page->va, frame->kva, writable))
+	{
+		return swap_in(page, frame->kva);
+	}
 
-	return swap_in(page, frame->kva);
+	return false;
 }
 
 /*by Jin-Hyuk Jang
