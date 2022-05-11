@@ -175,10 +175,32 @@ vm_get_frame (void) {
 }
 
 /* Growing the stack. */
-//static void
+
+/* Edited Code - Jinhyen Kim
+   This is only called in the situation where a page fault
+      can be handled with a stack growth. 
+   More specifically, we allocate additional anonymous pages
+      to the stack until the given address is no longer 
+      invalid. */
+
 static bool
 vm_stack_growth (void *addr UNUSED) {
+
+	/* We create an uninit page for the stack which becomes anonymous. 
+	   If this is successful, we can expand the stack by taking
+	      the current thread's stack_bottom and lowering it
+	      by PGSIZE. */
+
+	if (vm_alloc_page(VM_ANON | VM_MARKER_0, addr, true)) {
+		(*(thread_current())).stack_bottom = ((*(thread_current())).stack_bottom) - PGSIZE;
+		return true;
+	}
+	else {
+		return false;
+	}
 }
+
+/* Edited Code - Jinhyen Kim (Project 3 - Stack Growth) */
 
 /* Handle the fault on write_protected page */
 static bool
