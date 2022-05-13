@@ -554,6 +554,10 @@ void munmap (void *addr) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 
+#ifdef VM
+	(*(thread_current())).currentRsp = f->rsp;
+#endif
+
 	/* Edited Code - Jinhyen Kim
 
 	Copied from syscall-nr.h
@@ -594,9 +598,16 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 		case SYS_EXEC:
 
+			/*
 			if (exec(((*(f)).R).rdi) == -1) {
 				exit(-1);
 			}
+			break;
+			*/
+		
+			(((*(f)).R).rax) = exec((((*(f)).R).rdi));
+			if ((((*(f)).R).rax) == -1)
+				exit(-1);
 			break;
 			
 		case SYS_WAIT:

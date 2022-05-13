@@ -35,7 +35,7 @@ vm_init (void) {
 	      frame table as well. */
 
 	list_init(&(frameTable));
-	/* list_elem = list_begin(&(frameTable)); */
+	frameElem = list_begin(&(frameTable));
 
 	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 

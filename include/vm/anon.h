@@ -4,6 +4,15 @@
 struct page;
 enum vm_type;
 
+/* Edited Code - Jinhyen Kim 
+   For Swap In/Out, we need to track down memory frames that are
+      not being used.
+   In pintos, the structure bitmap is used to track usage. */
+
+struct bitmap *memFrameTable;
+
+/* Edited Code - Jinhyen Kim (Project 3 - Swap In/Out) */
+
 struct anon_page {
 };
 

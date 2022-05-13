@@ -51,6 +51,10 @@ uninit_initialize (struct page *page, void *kva) {
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
 
+	/* Edited Code - Jinhyen Kim */
+	uninit->pageIndex = -1;
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 	/* TODO: You may need to fix this function. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
 		(init ? init (page, aux) : true);
@@ -65,4 +69,13 @@ uninit_destroy (struct page *page) {
 	struct uninit_page *uninit UNUSED = &page->uninit;
 	/* TODO: Fill this function.
 	 * TODO: If you don't have anything to do, just return. */
+
+	/* Edited Code - Jinhyen Kim */
+
+	struct binInforLoader *info = (struct binInforLoader *)(uninit->aux);
+	
+	free(info);
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 }
