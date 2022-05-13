@@ -4,6 +4,7 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/vaddr.h"
+#include <hash.h>
 
 /* Edited Code - Jinhyen Kim 
    To store and manage all of the frames, we create a 
@@ -122,6 +123,21 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	struct page *page = NULL;
 	/* TODO: Fill this function. */
 
+	/*by Jin-Hyuk Jang
+	We get a page that has the virtual address that we are looking for
+	Then we use hash_find function to find the hash_elem if it exists in the hash_table
+	If it does, we return the page with the hash_elem, if not we return NULL*/
+	struct page return_page;
+	return_page.va = pg_round_down(va);
+	struct hash_elem *e;
+
+	e = hash_find(&spt->page_hash_table, &return_page.hash_elem);
+
+	if (e == NULL)
+		return NULL;
+
+	page = hash_entry(e, struct page, hash_elem);
+	/*by Jin-Hyuk Jang - project 3 (memeory management)*/
 	return page;
 }
 
@@ -132,6 +148,17 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 	int succ = false;
 	/* TODO: Fill this function. */
 
+	/*by Jin-Hyuk Jang
+	We have to check if the hash_elem of the page that we're trying to insert
+	is already in the hash table. Therefore, we use hash_find to get the hash_elem,
+	and if it does exist, we return false.
+	If not, we use hash_insert to insert the given hash_elem into the hash table.*/
+	struct hash_elem *e = hash_find(&spt->page_hash_table, &page->hash_elem);
+	if (e != NULL)
+		return succ;
+
+	hash_insert(&spt->page_hash_table, &page->hash_elem);
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 	return succ;
 }
 
@@ -147,6 +174,48 @@ vm_get_victim (void) {
 	struct frame *victim = NULL;
 	 /* TODO: The policy for eviction is up to you. */
 
+	/*by Jin-Hyuk Jang
+	we get the victim frame from the frame table */
+	struct thread *frameOwner;
+
+	struct list_elem *elem = frameElem;
+
+	for (frameElem = elem; frameElem != list_end(&frameTable); frameElem = list_next(frameElem))
+	{
+
+		victim = list_entry(frameElem, struct frame, elem);
+
+		if (victim->page == NULL) {
+			return victim;
+		}
+	
+		frameOwner = victim->page->thread;	
+
+		if (pml4_is_accessed(frameOwner->pml4, victim->page->va))
+			pml4_set_accessed(frameOwner->pml4, victim->page->va, 0);
+		else
+			return victim;
+	}
+
+	for (frameElem = list_begin(&frameTable); frameElem != elem; frameElem = list_next(frameElem))
+	{
+
+		victim = list_entry(frameElem, struct frame, elem);
+
+		if (victim->page == NULL) {
+			return victim;
+		}
+
+		frameOwner = victim->page->thread;	
+
+		if (pml4_is_accessed(frameOwner->pml4, victim->page->va))
+			pml4_set_accessed(frameOwner->pml4, victim->page->va, 0);
+		else
+			return victim;
+	}
+
+	frameElem = list_begin(&frameTable);
+	victim = list_entry(frameElem, struct frame, elem);
 	return victim;
 }
 
@@ -157,7 +226,15 @@ vm_evict_frame (void) {
 	struct frame *victim UNUSED = vm_get_victim ();
 	/* TODO: swap out the victim and return the evicted frame. */
 
-	return NULL;
+	/*by Jin-Hyuk Jang
+	We swap out the frame that isn't used from swap table*/
+	if (victim->page != NULL)
+	{
+		swap_out(victim->page);
+	}
+	/*by Jin-Hyuk Jang - project3 (memory management)*/
+
+	return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -168,9 +245,32 @@ static struct frame *
 vm_get_frame (void) {
 	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
+	/*by Jin-Hyuk Jang
+	We need to get a physical page from the USER pool.
+	Therefore we use palloc_get_page to get a new physical page.
+	Then, if the physical page is not null, we create a new frame and address
+	the kva of the frame to the physical page.
+	If the physical page is null, then we get a frame that is not used.*/
+	void *physical_page = palloc_get_page(PAL_USER);
 
-	ASSERT (frame != NULL);
-	ASSERT (frame->page == NULL);
+	if (physical_page != NULL)
+	{
+		frame = malloc(sizeof(struct frame));
+		frame->kva = physical_page;
+		frame->page = NULL;
+		list_push_back(&frameTable, &frame->elem);
+	}
+	else
+	{
+		frame = vm_evict_frame();
+		if (frame->page != NULL) {
+			frame->page->frame = NULL;
+			frame->page = NULL;
+		}
+	}
+
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
 	return frame;
 }
 
@@ -282,7 +382,17 @@ vm_claim_page (void *va UNUSED) {
 	struct page *page = NULL;
 	/* TODO: Fill this function */
 
-	return vm_do_claim_page (page);
+	/*by Jin-Hyuk Jang
+	We get a page with from suggested va, and use vm_do_claim_page to assign in to frame*/
+	struct supplemental_page_table *spt = &thread_current()->spt;
+	page = spt_find_page(spt, va);
+	if (page == NULL)
+	{
+		return false;
+	}
+	/*by Jin-Hyuk Jang - project 3 (memeory management)*/
+
+	return vm_do_claim_page(page);
 }
 
 /* Claim the PAGE and set up the mmu. */
@@ -296,13 +406,49 @@ vm_do_claim_page (struct page *page) {
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 
-	return swap_in (page, frame->kva);
+	/*by jin-Hyuk Jang*/
+	struct thread *t = page->thread;
+	bool writable = page->writable;
+	if (pml4_set_page(t->pml4, page->va, frame->kva, writable))
+	{
+		pml4_set_accessed(t->pml4, page->va, true);
+		return swap_in(page, frame->kva);
+	}
+
+	return false;
 }
 
-/* Initialize new supplemental page table */
-void
-supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
+/*by Jin-Hyuk Jang
+ page_hash function is needed to calculate hash from aux data
+ */
+unsigned hash_hash(const struct hash_elem *hp, void *aux UNUSED)
+{
+	const struct page *page = hash_entry(hp, struct page, hash_elem);
+	return hash_bytes(&page->va, sizeof page->va);
 }
+/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
+/*by Jin-Hyuk Jang
+ page_hash function is needed to calculate hash from aux data
+ */
+unsigned hash_less(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED)
+{
+	const struct page *pa = hash_entry(a, struct page, hash_elem);
+	const struct page *pb = hash_entry(b, struct page, hash_elem);
+	return pa->va < pb->va;
+}
+/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
+/* Initialize new supplemental page table */
+/*by Jinhyuk Jang
+Function initializes additional page tables.
+Can choose which data structure to use for the additional page table
+Called upon when a new process begins (on userprog/process.c initd) or when a process is forked(userprog/process.c __do_fork)*/
+void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED)
+{
+	hash_init(&spt->page_hash_table, hash_hash, hash_less, NULL);
+}
+/*by Jin-Hyuk Jang - project 3 (memory management)*/
 
 /* Copy supplemental page table from src to dst */
 bool

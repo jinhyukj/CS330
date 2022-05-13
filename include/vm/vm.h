@@ -27,6 +27,7 @@ enum vm_type {
 #include "vm/uninit.h"
 #include "vm/anon.h"
 #include "vm/file.h"
+#include <hash.h>
 #ifdef EFILESYS
 #include "filesys/page_cache.h"
 #endif
@@ -46,9 +47,19 @@ struct page {
 	struct frame *frame;   /* Back reference for frame */
 
 	/* Your implementation */
-	
-	/* Edited Code - Jinhyen Kim */
+
+	/*by JinHyuk Jang
+	give page structure list_elem to use hash table*/
+	struct hash_elem hash_elem;
+	/*by JinHyuk Jang - project 3 (memory management)*/
+
+	/*by Jin-Hyuk Jang
+	We need the writable field to see if page is actually writable*/
 	bool writable;
+	/*by Jin-Hyuk Jang - project 3 (memory management)*/
+
+	/* Edited Code - Jinhyen Kim 
+	   We store the thread that owns the page. */
 	struct thread *thread;
 	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
@@ -68,6 +79,7 @@ struct page {
 struct frame {
 	void *kva;
 	struct page *page;
+	struct list_elem elem;
 };
 
 
@@ -105,8 +117,15 @@ struct page_operations {
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
-struct supplemental_page_table {
+
+/*by Jin-Hyuk Jang
+We need to create a supplemental_page_table to do paging
+We will use hash table*/
+struct supplemental_page_table
+{
+	struct hash page_hash_table;
 };
+/*by Jin-Hyuk Jang - Project 3 (memory management)*/
 
 #include "threads/thread.h"
 void supplemental_page_table_init (struct supplemental_page_table *spt);
