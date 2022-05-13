@@ -5,6 +5,17 @@
 #include "vm/inspect.h"
 #include <hash.h>
 #include "include/threads/vaddr.h"
+#include "threads/vaddr.h"
+
+/* Edited Code - Jinhyen Kim
+   To store and manage all of the frames, we create a
+	  list of frames as well as the list_elem to use
+	  for the list. */
+
+struct list frameTable;
+struct list_elem *frameElem;
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -18,6 +29,15 @@ void vm_init(void)
 	register_inspect_intr();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
+
+	/* Edited Code - Jinhyen Kim
+	   When a virtual machine is initialized, we need to initialize the
+		  frame table as well. */
+
+	list_init(&(frameTable));
+	/* list_elem = list_begin(&(frameTable)); */
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -61,7 +81,42 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
 
+		/* Edited Code - Jinhyen Kim
+		   1. To create a new page, we first need to get memory allocation for
+				 the page with malloc().
+		   2. Once we have the memory space, we define a new page with the
+				 given VM type.
+		   3. Depending on the VM type, we use a different initializer.
+		   4. Then, we create a new uninit page by calling uninit_new().
+				 For the new uninitialized page, we set its "writable"
+				 status as given by the function, as well as its
+				 current thread. */
+
+		struct page *newUninitPage = malloc(sizeof(struct page));
+
+		bool (*pageInit)(struct page *, enum vm_type);
+
+		if (VM_TYPE(type) == VM_FILE)
+		{
+			pageInit = file_backed_initializer;
+		}
+		else if (VM_TYPE(type) == VM_ANON)
+		{
+			pageInit = anon_initializer;
+		}
+
+		uninit_new(newUninitPage, upage, init, type, aux, pageInit);
+
+		(*(newUninitPage)).writable = writable;
+		(*(newUninitPage)).thread = thread_current();
+
 		/* TODO: Insert the page into the spt. */
+
+		spt_insert_page(spt, newUninitPage);
+
+		return true;
+
+		/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 	}
 err:
 	return false;
@@ -199,10 +254,35 @@ vm_get_frame(void)
 }
 
 /* Growing the stack. */
-static void
+
+/* Edited Code - Jinhyen Kim
+   This is only called in the situation where a page fault
+	  can be handled with a stack growth.
+   More specifically, we allocate additional anonymous pages
+	  to the stack until the given address is no longer
+	  invalid. */
+
+static bool
 vm_stack_growth(void *addr UNUSED)
 {
+
+	/* We create an uninit page for the stack which becomes anonymous.
+	   If this is successful, we can expand the stack by taking
+		  the current thread's stack_bottom and lowering it
+		  by PGSIZE. */
+
+	if (vm_alloc_page(VM_ANON | VM_MARKER_0, addr, true))
+	{
+		(*(thread_current())).stack_bottom = ((*(thread_current())).stack_bottom) - PGSIZE;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
+
+/* Edited Code - Jinhyen Kim (Project 3 - Stack Growth) */
 
 /* Handle the fault on write_protected page */
 static bool
@@ -215,11 +295,68 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
 {
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
-	struct page *page = NULL;
+
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 
-	return vm_do_claim_page(page);
+	/* Edited Code - Jinhyen Kim
+	   Before we declare *page, we need to check for two cases where
+		  we should immediately return the function instead.
+	   1. If the page address is not user address, it is invalid.
+	   2. Alternatively, if not_present is false, then it is
+			 also invalid. */
+
+	if (!(is_user_vaddr(addr)))
+	{
+		return false;
+	}
+	else if (!(not_present))
+	{
+		return false;
+	}
+
+	/* Now, we can declare *page. */
+
+	struct page *page = spt_find_page(spt, addr);
+
+	/* If we are in user mode, rsp is provided by the interrupt frame.
+	   If we are in the kernel mode, rsp is provided by the current
+		  thread's stored user rsp instead. */
+
+	void *rsp = NULL;
+	if (user)
+	{
+		rsp = (*(f)).rsp;
+	}
+	else
+	{
+		rsp = (*(thread_current())).currentRsp;
+	}
+
+	if (page == NULL)
+	{
+
+		/**/
+		if ((USER_STACK > addr) && (addr >= (USER_STACK - (1 << 20))) && (addr >= rsp - 10))
+		{
+
+			void *fpage = ((*(thread_current())).stack_bottom) - PGSIZE;
+
+			if (vm_stack_growth(fpage))
+			{
+				page = spt_find_page(spt, fpage);
+				return vm_do_claim_page(page);
+			}
+		}
+
+		return false;
+	}
+	else
+	{
+		return vm_do_claim_page(page);
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 }
 
 /* Free the page.

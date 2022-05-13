@@ -16,6 +16,8 @@
 #include "threads/vaddr.h"
 #include "userprog/process.h"
 #include "threads/synch.h"
+#include "vm/vm.h"
+#include "vm/file.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -89,22 +91,73 @@ void exit(int status) {
       3: When the pointer is pointer to Kernel virtual memory address space
    For these three cases, we terminate the user process.*/
 
-void checkUMA (void* userAddress) {
+struct page *checkUMA (void* userAddress) {
 
 	if (userAddress == NULL) {
 		exit(-1);
 	}
-	if (!(is_user_vaddr(userAddress))) {
+	else if (!(is_user_vaddr(userAddress))) {
 		exit(-1);
 	}
+
+	/* Edited Code - Jinhyen Kim
+	   This function is further edited in project 3 as 
+	      checkUMA now needs to check the mapping of a virtual memory
+	      through spt_find_page.
+	   Additionally, it now returns the page returned by the function
+	      spt_find_page. */
+
 	if (pml4_get_page(((*(thread_current ())).pml4), userAddress) == NULL) {	
 		exit(-1);
 	}
-	return;
+
+	else {
+		struct page *page = spt_find_page(&((*(thread_current())).spt), userAddress);
+
+		if (page == NULL) {
+			exit(-1);
+		}
+		else {
+			return page;
+		}
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 }
 
 /* Edited Code - Jinhyen Kim (Project 2 - User Memory) */
+
+/* Edited Code - Jinhyen Kim
+   For the system call read, we need to ensure that the 
+      buffer memory used to read data is a valid virtual address. 
+   In addition, this buffer memory should also allow writes.
+      (writable must be true) */
+
+void checkReadBuffer (void *buffer, unsigned size) {
+
+	for (int i = 0; i < size; i++) {
+		struct page *page = checkUMA(buffer + i);
+		if ((*(page)).writable == false) {
+			exit(-1);
+		}
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
+/* Edited Code - Jinhyen Kim
+   For the system call write, we need to ensure that the 
+      buffer memory used to write data is a valid virtual address. */
+
+void checkWriteBuffer (void *buffer, unsigned size) {
+
+	for (int i = 0; i < size; i++) {
+		struct page *page = checkUMA(buffer + i);
+	}
+}
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 /* Edited Code - Jinhyen Kim*/
 
@@ -441,6 +494,63 @@ void close(int fd) {
 
 /* Edited Code - Jinhyen Kim (Project 2 - System Call) */
 
+/* Edited Code - Jinhyen Kim
+   New System Calls for Project 3 */
+
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
+
+	/* There are many invalid conditions we must check:
+	   1. We check whether the given address is NULL.
+	   2. We check whether the given address is not user address. 
+	   3. We check whether the given address has any offset.
+
+	   4. We check whether length is not positive.
+	   5. We check whether the offset is not a multiple of page size.
+
+	   6. We check whether the file descriptor value is within limit.
+	   7. We check whether the retrieved file is NULL.
+	   8. We check whether the retrieved file are console input / output.
+	   9. We check whether the retrieved file has a positive length. 
+
+	   For any of the invalid conditions met, we return NULL. */
+
+	if ((addr == NULL) || !(is_user_vaddr(addr)) || !(pg_ofs(addr) == 0) || !(length > 0) || !(offset % PGSIZE == 0) || (fd < 0) || (fd >= 1536)) {
+		return NULL;
+	}	
+
+	struct file *targetFile = (*(thread_current())).fdTable[fd];
+
+	if ((targetFile == NULL) || (targetFile < 2) || !(file_length(targetFile) > 0)) {
+		return NULL;
+	}
+
+	/* The actual process is done over at do_mmap at vm/file.c. */
+
+	return do_mmap(addr, length, writable, targetFile, offset);
+
+}
+
+void munmap (void *addr) {
+
+	/* We simply check for two invalid conditions:
+	   1. We check whether the given address is NULL.
+	   2. We check whether the given address is not user address. */
+
+	if (addr == NULL) {
+		exit(-1);
+	}
+	if (!(is_user_vaddr(addr))) {
+		exit(-1);
+	}
+	
+	/* The actual process is done over at do_munmap at vm/file.c. */
+
+	do_munmap(addr);
+
+}
+
+/* Edited Code - Jinhyen Kim (Project 3 - Memory Mapped Files) */
+
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 
@@ -516,11 +626,13 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 		case SYS_READ:
 
+			checkReadBuffer((((*(f)).R).rsi), (((*(f)).R).rdx)); 
 			(((*(f)).R).rax) = read((((*(f)).R).rdi), (((*(f)).R).rsi), (((*(f)).R).rdx));
 			break;
 
 		case SYS_WRITE:
 
+			checkWriteBuffer((((*(f)).R).rsi), (((*(f)).R).rdx)); 
 			(((*(f)).R).rax) = write((((*(f)).R).rdi), (((*(f)).R).rsi), (((*(f)).R).rdx));
 			break;
 
@@ -538,6 +650,21 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 			close((((*(f)).R).rdi));
 			break;			
+
+		/* Edited Code - Jinhyen Kim 
+		   From here, system calls for Project 3 are included. */
+
+		case SYS_MMAP:
+			
+			(((*(f)).R).rax) = mmap((((*(f)).R).rdi), (((*(f)).R).rsi), (((*(f)).R).rdx), (((*(f)).R).r10), (((*(f)).R).r8));
+			break;
+
+		case SYS_MUNMAP:
+
+			munmap((((*(f)).R).rdi));
+			break;
+
+		/* Edited Code - Jinhyen Kim (Project 3 - Memory Mapped Files) */
 
 		default:
 

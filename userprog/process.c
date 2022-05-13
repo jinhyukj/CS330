@@ -832,12 +832,45 @@ install_page(void *upage, void *kpage, bool writable)
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
 
-static bool
-lazy_load_segment(struct page *page, void *aux)
+bool lazy_load_segment(struct page *page, void *aux)
 {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
+
+	/* Edited Code - Jinhyen Kim
+		  1. "aux" represents the information we need for the loading of
+				binary. We start off by converting the information at "aux"
+				to our structure binLoadInfo that we declared at vm.h.
+		  2. In segment loading, we ofen wish to load files at the middle.
+				To support this, we use file_seek to tell which byte to
+				be read or to be written to.
+		  3. Due to the lazy nature of the function, the kernel should receive
+				information about the file. To enable this, we need to set a
+				kernel virtual address as the frame's mapped kva.
+		  4. We check whether the file has enough capacity beyond the number of
+				bytes set at read_bytesInfo.
+				If this is true, then we use memset() to replace any bits beyond
+				the file as 0 by the amount set by zero_bytesInfo.
+				Otherwise, we simply return false. */
+
+	struct binLoadInfo *info = aux;
+
+	file_seek((*(info)).fileInfo, (*(info)).ofsInfo);
+
+	void *kva = (*((*(page)).frame)).kva;
+
+	if (file_read((*(info)).fileInfo, kva, (*(info)).read_bytesInfo) == (off_t)(*(info)).read_bytesInfo)
+	{
+		memset(kva + (*(info)).read_bytesInfo, 0, (*(info)).zero_bytesInfo);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -871,15 +904,32 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		void *aux = NULL;
+
+		/* Edited Code - Jinhyen Kim
+		   We have defined a new structure binLoadInfo at vm.h.
+			  We will store all information to this structure.*/
+
+		struct binLoadInfo *info = malloc(sizeof(struct binLoadInfo));
+
+		(*(info)).fileInfo = file;
+		(*(info)).ofsInfo = ofs;
+		(*(info)).read_bytesInfo = page_read_bytes;
+		(*(info)).zero_bytesInfo = page_zero_bytes;
+
 		if (!vm_alloc_page_with_initializer(VM_ANON, upage,
-											writable, lazy_load_segment, aux))
+											writable, lazy_load_segment, info))
 			return false;
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
+
+		/* To advance, we need to increment offset by the amount of
+			  bytes read. */
+		ofs += page_read_bytes;
+
+		/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 	}
 	return true;
 }
@@ -895,6 +945,26 @@ setup_stack(struct intr_frame *if_)
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
+
+	/* Edited Code - Jinhyen Kim
+	   We create an uninit page for the stack which becomes anonymous.
+	   Immediately after creating the page, we try to claim it.
+	   If successful, then we set the rsp as USER_STACK and update
+		  current thread's user stack's bottom address as the stack_bottom. */
+
+	success = vm_alloc_page(VM_ANON | VM_MARKER_0, stack_bottom, true);
+
+	if (success)
+	{
+		success = vm_claim_page(stack_bottom);
+		if (success)
+		{
+			(*(if_)).rsp = USER_STACK;
+			(*(thread_current())).stack_bottom = stack_bottom;
+		}
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 	return success;
 }

@@ -1,6 +1,9 @@
 /* file.c: Implementation of memory backed file object (mmaped object). */
 
 #include "vm/vm.h"
+#include "threads/vaddr.h"
+#include "userprog/process.h"
+#include "threads/mmu.h"
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -47,12 +50,108 @@ file_backed_destroy (struct page *page) {
 }
 
 /* Do the mmap */
+
+/* Edited Code - Jinhyen Kim */
+
 void *
 do_mmap (void *addr, size_t length, int writable,
 		struct file *file, off_t offset) {
+	
+	/* For do_mmap, the return value is the original address. */
+	void *returnPointer = addr;
+
+	struct file *mapFile = file_reopen(file);
+
+	/* We cannot map beyond the file size, so if
+	      length exceeds file length, we restrict
+	      the size of length. */
+	if (length > file_length(mapFile)) {
+		length = file_length(mapFile);
+	}
+
+	size_t readBytes;
+
+	/* exitFlag is a boolean variable that indicates
+	      whether the mapping process is finished or not. */
+	bool exitFlag = true;
+
+	while (exitFlag) {
+
+		if (length < PGSIZE) {
+			/* If this is called, it means we are at the 
+			      final while loop of mapping. Therefore, we
+			      set exitFlag as false. */
+			readBytes = length;
+			exitFlag = false;
+		}
+		else {
+			/* If this is called, it means we still need to map
+			      more than a page-size worth of data. Since we cannot
+			      map two pages at once, we restrict readBytes 
+			      to the size of a single page. */
+			readBytes = PGSIZE;
+			length = length - PGSIZE;
+		}
+
+		/* We already have a struct designed for lazy loading, so we use
+		      it here. We update the struct variables accordingly. */
+		struct binLoadInfo *info = malloc(sizeof(struct binLoadInfo));
+	
+		(*(info)).fileInfo = mapFile;
+		(*(info)).ofsInfo = offset;
+		(*(info)).read_bytesInfo = readBytes;
+		(*(info)).zero_bytesInfo = PGSIZE - readBytes;
+
+		/* vm_alloc_page_with_initializer determines whether the page 
+		      creation proecss was successful or not. If this returns 
+		      false, it means there was something wrong and so we return. */
+		if (!vm_alloc_page_with_initializer(VM_FILE, addr, writable, lazy_load_segment, info)) {
+			return NULL;
+		}
+
+		/* Once we finish mapping for a page, we increment both the
+		      offset and the address by a page size for the next 
+		      mapping process. */
+		offset = offset + PGSIZE;
+		addr = addr + PGSIZE;
+	}
+
+	return returnPointer;
+
 }
+
+/* Edited Code - Jinhyen Kim (Project 3 - Memory Mapped Files) */
+
+/* Edited Code - Jinhyen Kim */
 
 /* Do the munmap */
 void
 do_munmap (void *addr) {
+
+	struct page *mapPage = spt_find_page(&((*(thread_current())).spt), addr);
+
+	/* We run this function as long as there is a mapped page we need to
+	      unmap. */ 
+	while (mapPage != NULL) {
+
+		/* We can check for any "dirty" (used) bits by calling pml4_is_dirty.
+		      if this is the case, we undo the mapping and mark the pml4 table
+		      as "clean". */
+		      
+		if (pml4_is_dirty((*(thread_current())).pml4, (*(mapPage)).va)) {
+			struct binLoadInfo *info = ((*(mapPage)).uninit).aux;
+			file_write_at((*(info)).fileInfo, (*(mapPage)).va, (*(info)).read_bytesInfo, (*(info)).ofsInfo);
+			pml4_set_dirty((*(thread_current())).pml4, (*(mapPage)).va, false);
+		}
+
+		/* Lastly, we iterate through the next address and repeat 
+		      the process. */		
+
+		addr = addr + PGSIZE;
+		mapPage = spt_find_page(&((*(thread_current())).spt), addr);
+
+	}
+
 }
+
+/* Edited Code - Jinhyen Kim (Project 3 - Memory Mapped Files) */

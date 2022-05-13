@@ -49,6 +49,11 @@ struct page
 	struct frame *frame; /* Back reference for frame */
 
 	/* Your implementation */
+	
+	/* Edited Code - Jinhyen Kim */
+	bool writable;
+	struct thread *thread;
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 	/*by JinHyuk Jang
 	give page structure list_elem to use hash table*/
@@ -80,6 +85,22 @@ struct frame
 	struct page *page;
 	struct list_elem elem;
 };
+
+
+/* Edited Code - Jinhyen Kim
+   When we lazily load segments, we need to pass on necessary 
+      information for the loading of binary.
+   The following structure will hold this information. */
+
+struct binLoadInfo {
+	struct file *fileInfo;
+	off_t ofsInfo;
+	size_t read_bytesInfo;
+	size_t zero_bytesInfo;
+};
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 
 /* The function table for page operations.
  * This is one way of implementing "interface" in C.
