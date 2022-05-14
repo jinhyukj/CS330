@@ -6,6 +6,7 @@
 #include <hash.h>
 #include "include/threads/vaddr.h"
 #include "threads/vaddr.h"
+#include <hash.h>
 
 /* Edited Code - Jinhyen Kim
    To store and manage all of the frames, we create a
@@ -35,7 +36,7 @@ void vm_init(void)
 		  frame table as well. */
 
 	list_init(&(frameTable));
-	/* list_elem = list_begin(&(frameTable)); */
+	frameElem = list_begin(&(frameTable));
 
 	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 }
@@ -196,6 +197,50 @@ vm_get_victim(void)
 	}
 	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 
+	/*by Jin-Hyuk Jang
+	we get the victim frame from the frame table */
+	struct thread *frameOwner;
+
+	struct list_elem *elem = frameElem;
+
+	for (frameElem = elem; frameElem != list_end(&frameTable); frameElem = list_next(frameElem))
+	{
+
+		victim = list_entry(frameElem, struct frame, elem);
+
+		if (victim->page == NULL)
+		{
+			return victim;
+		}
+
+		frameOwner = victim->page->thread;
+
+		if (pml4_is_accessed(frameOwner->pml4, victim->page->va))
+			pml4_set_accessed(frameOwner->pml4, victim->page->va, 0);
+		else
+			return victim;
+	}
+
+	for (frameElem = list_begin(&frameTable); frameElem != elem; frameElem = list_next(frameElem))
+	{
+
+		victim = list_entry(frameElem, struct frame, elem);
+
+		if (victim->page == NULL)
+		{
+			return victim;
+		}
+
+		frameOwner = victim->page->thread;
+
+		if (pml4_is_accessed(frameOwner->pml4, victim->page->va))
+			pml4_set_accessed(frameOwner->pml4, victim->page->va, 0);
+		else
+			return victim;
+	}
+
+	frameElem = list_begin(&frameTable);
+	victim = list_entry(frameElem, struct frame, elem);
 	return victim;
 }
 
@@ -239,17 +284,21 @@ vm_get_frame(void)
 	{
 		frame = malloc(sizeof(struct frame));
 		frame->kva = physical_page;
+		frame->page = NULL;
+		list_push_back(&frameTable, &frame->elem);
 	}
 	else
 	{
 		frame = vm_evict_frame();
+		if (frame->page != NULL)
+		{
+			frame->page->frame = NULL;
+			frame->page = NULL;
+		}
 	}
-	ASSERT(frame != NULL);
 
-	list_push_back(&frame_table, &frame->elem);
 	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 
-	// ASSERT(frame->page == NULL);
 	return frame;
 }
 
@@ -397,11 +446,11 @@ vm_do_claim_page(struct page *page)
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-	/*by jin-Hyuk Jang*/
-	struct thread *cur = thread_current();
+	struct thread *t = page->thread;
 	bool writable = page->writable;
-	if (pml4_set_page(cur->pml4, page->va, frame->kva, writable))
+	if (pml4_set_page(t->pml4, page->va, frame->kva, writable))
 	{
+		pml4_set_accessed(t->pml4, page->va, true);
 		return swap_in(page, frame->kva);
 	}
 

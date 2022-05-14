@@ -16,6 +16,14 @@ struct uninit_page {
 	void *aux;
 	/* Initiate the struct page and maps the pa to the va */
 	bool (*page_initializer) (struct page *, enum vm_type, void *kva);
+
+	/* Edited Code - Jinhyen Kim 
+	   For Swap In/Out, we need to track down the pages' swapping index.
+	   To do this, we create a new class variable. */
+
+	int pageIndex;
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Swap In/Out) */
 };
 
 void uninit_new (struct page *page, void *va, vm_initializer *init,
