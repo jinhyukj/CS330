@@ -13,17 +13,16 @@ Formatting file system...done.
 Boot complete.
 Putting 'multi-recurse' into the file system...
 Executing 'multi-recurse 15':
-Kernel PANIC at ../../userprog/process.c:84 in initd(): Fail to launch initd
-
-Call stack: 0x8004218906 0x800421bfbc 0x8004207f82.
+Kernel PANIC at ../../lib/kernel/list.c:158 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
+Call stack: 0x8004218906 0x8004218e4f 0x80042190f7 0x8004221c57 0x8004221f1d 0x8004221f03 0x800421d1b6 0x800421cd58 0x800421c74f 0x800421bf83 0x8004207f82.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 84 ticks
-Thread: 35 idle ticks, 49 kernel ticks, 0 user ticks
+Timer: 80 ticks
+Thread: 30 idle ticks, 49 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 39 reads, 254 writes
+hd0:1: 41 reads, 254 writes
 hd1:0: 113 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1167 characters output
+Console: 1316 characters output
 Key

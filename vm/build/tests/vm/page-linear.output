@@ -4,7 +4,7 @@ Kernel command line: -q -f put page-linear run page-linear
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  130,867,200 loops/s.
+Calibrating timer...  157,081,600 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 108 sector (54 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -13,17 +13,16 @@ Formatting file system...done.
 Boot complete.
 Putting 'page-linear' into the file system...
 Executing 'page-linear':
-Kernel PANIC at ../../userprog/process.c:84 in initd(): Fail to launch initd
-
-Call stack: 0x8004218906 0x800421bfbc 0x8004207f82.
+Kernel PANIC at ../../lib/kernel/list.c:158 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
+Call stack: 0x8004218906 0x8004218e4f 0x80042190f7 0x8004221c57 0x8004221f1d 0x8004221f03 0x800421d1b6 0x800421cd58 0x800421c74f 0x800421bf83 0x8004207f82.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 84 ticks
-Thread: 32 idle ticks, 52 kernel ticks, 0 user ticks
+Timer: 83 ticks
+Thread: 33 idle ticks, 47 kernel ticks, 3 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 39 reads, 244 writes
+hd0:1: 41 reads, 244 writes
 hd1:0: 108 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1151 characters output
+Console: 1300 characters output
 Key

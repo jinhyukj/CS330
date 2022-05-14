@@ -4,7 +4,7 @@ Kernel command line: -q -f put mmap-exit put child-mm-wrt run mmap-exit
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  157,081,600 loops/s.
+Calibrating timer...  105,472,000 loops/s.
 hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 212 sector (106 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -14,17 +14,16 @@ Boot complete.
 Putting 'mmap-exit' into the file system...
 Putting 'child-mm-wrt' into the file system...
 Executing 'mmap-exit':
-Kernel PANIC at ../../userprog/process.c:84 in initd(): Fail to launch initd
-
-Call stack: 0x8004218906 0x800421bfbc 0x8004207f82.
+Kernel PANIC at ../../lib/kernel/list.c:158 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
+Call stack: 0x8004218906 0x8004218e4f 0x80042190f7 0x8004221c57 0x8004221f1d 0x8004221f03 0x800421d1b6 0x800421cd58 0x800421c74f 0x800421bf83 0x8004207f82.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 86 ticks
-Thread: 36 idle ticks, 50 kernel ticks, 0 user ticks
+Timer: 91 ticks
+Thread: 30 idle ticks, 60 kernel ticks, 1 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 66 reads, 462 writes
+hd0:1: 68 reads, 462 writes
 hd1:0: 212 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1208 characters output
+Console: 1357 characters output
 Key

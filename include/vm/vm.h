@@ -49,7 +49,7 @@ struct page
 	struct frame *frame; /* Back reference for frame */
 
 	/* Your implementation */
-	
+
 	/* Edited Code - Jinhyen Kim */
 	bool writable;
 	struct thread *thread;
@@ -59,11 +59,6 @@ struct page
 	give page structure list_elem to use hash table*/
 	struct hash_elem hash_elem;
 	/*by JinHyuk Jang - project 3 (memory management)*/
-
-	/*by Jin-Hyuk Jang
-	We need the writable field to see if page is actually writable*/
-	bool writable;
-	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -86,13 +81,13 @@ struct frame
 	struct list_elem elem;
 };
 
-
 /* Edited Code - Jinhyen Kim
-   When we lazily load segments, we need to pass on necessary 
-      information for the loading of binary.
+   When we lazily load segments, we need to pass on necessary
+	  information for the loading of binary.
    The following structure will hold this information. */
 
-struct binLoadInfo {
+struct binLoadInfo
+{
 	struct file *fileInfo;
 	off_t ofsInfo;
 	size_t read_bytesInfo;
@@ -100,7 +95,6 @@ struct binLoadInfo {
 };
 
 /* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
-
 
 /* The function table for page operations.
  * This is one way of implementing "interface" in C.

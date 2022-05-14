@@ -14,17 +14,16 @@ Boot complete.
 Putting 'open-normal' into the file system...
 Putting 'sample.txt' into the file system...
 Executing 'open-normal':
-Kernel PANIC at ../../userprog/process.c:84 in initd(): Fail to launch initd
-
-Call stack: 0x8004218906 0x800421bfbc 0x8004207f82.
+Kernel PANIC at ../../lib/kernel/list.c:158 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
+Call stack: 0x8004218906 0x8004218e4f 0x80042190f7 0x8004221c57 0x8004221f1d 0x8004221f03 0x800421d1b6 0x800421cd58 0x800421c74f 0x800421bf83 0x8004207f82.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 83 ticks
-Thread: 32 idle ticks, 51 kernel ticks, 0 user ticks
+Timer: 80 ticks
+Thread: 34 idle ticks, 46 kernel ticks, 0 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 66 reads, 248 writes
+hd0:1: 68 reads, 248 writes
 hd1:0: 105 reads, 0 writes
 hd1:1: 0 reads, 0 writes
-Console: 1211 characters output
+Console: 1360 characters output
 Key
