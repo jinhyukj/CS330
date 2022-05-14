@@ -121,10 +121,6 @@ struct page_operations
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
-<<<<<<< HEAD
-=======
-
->>>>>>> branch-jin
 /*by Jin-Hyuk Jang
 We need to create a supplemental_page_table to do paging
 We will use hash table*/
