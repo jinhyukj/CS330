@@ -1,15 +1,17 @@
 FAIL
-Kernel panic in run: PANIC at ../../lib/kernel/list.c:158 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
-Call stack: 0x8004218906 0x8004218e4f 0x80042190f7 0x8004221c57 0x8004221f1d 0x8004221f03 0x800421d1b6 0x800421cd58 0x800421c74f 0x800421bf83 0x8004207f82
+Kernel panic in run: PANIC at ../../threads/palloc.c:321 in palloc_free_multiple(): assertion `bitmap_all (pool->used_map, page_idx, page_cnt)' failed.
+Call stack: 0x8004218906 0x800420c237 0x800420c284 0x800420d5b3 0x800420d636 0x800420d6b9 0x800420d782 0x800421c9a6 0x800421c8e7 0x800420740b 0x800421d8eb 0x800421e2f7 0x800421d79b
 Translation of call stack:
 0x0000008004218906: debug_panic (lib/kernel/debug.c:32)
-0x0000008004218e4f: list_insert (lib/kernel/list.c:159)
-0x00000080042190f7: list_push_back (lib/kernel/list.c:204)
-0x0000008004221c57: vm_get_frame (vm/vm.c:253)
-0x0000008004221f1d: vm_do_claim_page (vm/vm.c:393)
-0x0000008004221f03: vm_claim_page (vm/vm.c:387)
-0x000000800421d1b6: setup_stack (userprog/process.c:959)
-0x000000800421cd58: load (userprog/process.c:657)
-0x000000800421c74f: process_exec (userprog/process.c:359)
-0x000000800421bf83: initd (userprog/process.c:83)
-0x0000008004207f82: kernel_thread (threads/thread.c:740)
+0x000000800420c237: palloc_free_multiple (threads/palloc.c:322)
+0x000000800420c284: palloc_free_page (threads/palloc.c:329)
+0x000000800420d5b3: pt_destroy (threads/mmu.c:160 (discriminator 2))
+0x000000800420d636: pgdir_destroy (threads/mmu.c:170 (discriminator 2))
+0x000000800420d6b9: pdpe_destroy (threads/mmu.c:180 (discriminator 2))
+0x000000800420d782: pml4_destroy (threads/mmu.c:199)
+0x000000800421c9a6: process_cleanup (userprog/process.c:476)
+0x000000800421c8e7: process_exit (userprog/process.c:443)
+0x000000800420740b: thread_exit (threads/thread.c:413)
+0x000000800421d8eb: checkUMA (userprog/syscall.c:94)
+0x000000800421e2f7: syscall_handler (userprog/syscall.c:596)
+0x000000800421d79b: no_sti (userprog/syscall-entry.o:?)

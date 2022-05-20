@@ -1,15 +1,61 @@
 FAIL
-Kernel panic in run: PANIC at ../../lib/kernel/list.c:158 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
-Call stack: 0x8004218906 0x8004218e4f 0x80042190f7 0x8004221c57 0x8004221f1d 0x8004221f03 0x800421d1b6 0x800421cd58 0x800421c74f 0x800421bf83 0x8004207f82
-Translation of call stack:
-0x0000008004218906: debug_panic (lib/kernel/debug.c:32)
-0x0000008004218e4f: list_insert (lib/kernel/list.c:159)
-0x00000080042190f7: list_push_back (lib/kernel/list.c:204)
-0x0000008004221c57: vm_get_frame (vm/vm.c:253)
-0x0000008004221f1d: vm_do_claim_page (vm/vm.c:393)
-0x0000008004221f03: vm_claim_page (vm/vm.c:387)
-0x000000800421d1b6: setup_stack (userprog/process.c:959)
-0x000000800421cd58: load (userprog/process.c:657)
-0x000000800421c74f: process_exec (userprog/process.c:359)
-0x000000800421bf83: initd (userprog/process.c:83)
-0x0000008004207f82: kernel_thread (threads/thread.c:740)
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (fork-recursive) begin
+  (fork-recursive) child run
+  (fork-recursive) child run
+  (fork-recursive) child run
+  (fork-recursive) child run
+  (fork-recursive) child run
+  (fork-recursive) child run
+  (fork-recursive) child run
+  (fork-recursive) child run
+  child: exit(10)
+  (fork-recursive) Parent: child exit status is 10
+  child: exit(10)
+  (fork-recursive) Parent: child exit status is 10
+  child: exit(9)
+  (fork-recursive) Parent: child exit status is 9
+  child: exit(8)
+  (fork-recursive) Parent: child exit status is 8
+  child: exit(7)
+  (fork-recursive) Parent: child exit status is 7
+  child: exit(6)
+  (fork-recursive) Parent: child exit status is 6
+  child: exit(5)
+  (fork-recursive) Parent: child exit status is 5
+  child: exit(4)
+  (fork-recursive) Parent: child exit status is 4
+  (fork-recursive) end
+  fork-recursive: exit(0)
+Differences in `diff -u' format:
+  (fork-recursive) begin
+- (fork-recursive) child run
+- (fork-recursive) child run
+- (fork-recursive) child run
+- (fork-recursive) child run
+- (fork-recursive) child run
+- (fork-recursive) child run
+- (fork-recursive) child run
+- (fork-recursive) child run
+- child: exit(10)
+- (fork-recursive) Parent: child exit status is 10
+- child: exit(10)
+- (fork-recursive) Parent: child exit status is 10
+- child: exit(9)
+- (fork-recursive) Parent: child exit status is 9
+- child: exit(8)
+- (fork-recursive) Parent: child exit status is 8
+- child: exit(7)
+- (fork-recursive) Parent: child exit status is 7
+- child: exit(6)
+- (fork-recursive) Parent: child exit status is 6
+- child: exit(5)
+- (fork-recursive) Parent: child exit status is 5
+- child: exit(4)
+- (fork-recursive) Parent: child exit status is 4
++ child: exit(-1)
++ (fork-recursive) Parent: child exit status is -1
+  (fork-recursive) end
+  fork-recursive: exit(0)

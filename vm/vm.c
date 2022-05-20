@@ -184,7 +184,7 @@ vm_get_victim(void)
 
 	/*by Jin-Hyuk Jang
 	we get the victim frame from the frame table*/
-	struct thread *curr = thread_current();
+	/*struct thread *curr = thread_current();
 	struct list_elem *e;
 
 	for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
@@ -194,7 +194,7 @@ vm_get_victim(void)
 			pml4_set_accessed(curr->pml4, victim->page->va, 0);
 		else
 			return victim;
-	}
+	} */
 	/*by Jin-Hyuk Jang - project 3 (memory management)*/
 
 	/*by Jin-Hyuk Jang

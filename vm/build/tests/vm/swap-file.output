@@ -5,7 +5,7 @@ Pintos booting with:
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x7e0000 (Usable: 7,040 kB)
 Calibrating timer...  157,081,600 loops/s.
-hd0:0: detected 329 sector (164 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:0: detected 337 sector (168 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 7,931 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00003"
 hd1:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00004"
@@ -14,16 +14,20 @@ Boot complete.
 Putting 'swap-file' into the file system...
 Putting 'large.txt' into the file system...
 Executing 'swap-file':
-Kernel PANIC at ../../lib/kernel/list.c:158 in list_insert(): assertion `is_interior (before) || is_tail (before)' failed.
-Call stack: 0x8004218906 0x8004218e4f 0x80042190f7 0x8004221c57 0x8004221f1d 0x8004221f03 0x800421d1b6 0x800421cd58 0x800421c74f 0x800421bf83 0x8004207f82.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 309 ticks
-Thread: 154 idle ticks, 153 kernel ticks, 2 user ticks
+(swap-file) begin
+(swap-file) open "large.txt"
+(swap-file) mmap "large.txt"
+(swap-file) end
+swap-file: exit(0)
+Kernel PANIC at ../../threads/palloc.c:321 in palloc_free_multiple(): assertion `bitmap_all (pool->used_map, page_idx, page_cnt)' failed.
+Call stack: 0x8004218906 0x800420c237 0x800420c284 0x800420d5b3 0x800420d636 0x800420d6b9 0x800420d782 0x800421c9a6 0x800421c8e7 0x800420740b 0x800421d8eb 0x800421e2f7 0x800421d79bPage fault at 0x4747ffb0: not present error reading page in kernel context.
+swap-file: exit(-1)
+Kernel PANIC recursion at ../../threads/palloc.c:321 in palloc_free_multiple().
+Timer: 448 ticks
+Thread: 156 idle ticks, 165 kernel ticks, 127 user ticks
 hd0:0: 0 reads, 0 writes
-hd0:1: 68 reads, 15900 writes
+hd0:1: 7945 reads, 15900 writes
 hd1:0: 7931 reads, 0 writes
-hd1:1: 0 reads, 0 writes
-Console: 1355 characters output
+hd1:1: 3752 reads, 3752 writes
+Console: 1537 characters output
 Key
