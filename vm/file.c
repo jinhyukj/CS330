@@ -24,29 +24,86 @@ vm_file_init (void) {
 
 /* Initialize the file backed page */
 bool
-file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
+file_backed_initializer (struct page *page, enum vm_type type, void *kva)
+{
+	/*by Jin-Hyuk Jang */
+
 	/* Set up the handler */
 	page->operations = &file_ops;
 
-	struct file_page *file_page = &page->file;
+	/*by Jin-Hyuk Jang - memory mapped files */ 
 }
 
 /* Swap in the page by read contents from the file. */
 static bool
-file_backed_swap_in (struct page *page, void *kva) {
-	struct file_page *file_page UNUSED = &page->file;
+file_backed_swap_in (struct page *page, void *kva) 
+{
+	/*by Jin-Hyuk Jang
+	First check if page is NULL.
+	Then we save file, bytes read, zero bytes, and offset into binLoadInfo structure.
+	We read read_bytesInfo bytes of the file into page, and set */
+	if (page == NULL)
+		return false;
+
+	struct binLoadInfo *info = (struct binLoadInfo *)page->uninit.aux;
+	struct file *fileInfo = info->fileInfo;
+	size_t read_bytesInfo = info->read_bytesInfo;
+	size_t zero_bytesInfo = info->zero_bytesInfo;
+	off_t ofsInfo = info->ofsInfo;
+
+	file_seek(fileInfo, ofsInfo);
+
+	if (file_read(fileInfo, kva, read_bytesInfo) != (int)read_bytesInfo)
+	{
+		return false;
+	}
+
+	memset(kva + read_bytesInfo, 0, zero_bytesInfo);
+
+	return true;
+
+	/*by Jin-Hyuk Jang - project 3(swap in/out)*/
 }
 
 /* Swap out the page by writeback contents to the file. */
 static bool
-file_backed_swap_out (struct page *page) {
+file_backed_swap_out (struct page *page) 
+{
+	/*by Jin-Hyuk Jang */
+
 	struct file_page *file_page UNUSED = &page->file;
+	struct thread *curr = thread_current();
+
+	if (page == NULL)
+		return false;
+
+	struct binLoadInfo *info = (struct binLoadInfo *)page->uninit.aux;
+	struct file *fileInfo = info->fileInfo;
+	size_t read_bytesInfo = info->read_bytesInfo;
+	size_t zero_bytesInfo = info->zero_bytesInfo;
+	off_t ofsInfo = info->ofsInfo;
+
+	if (pml4_is_dirty(curr->pml4, page->va))
+	{
+		file_write_at(fileInfo, page->va, read_bytesInfo, ofsInfo);
+		pml4_set_dirty(curr->pml4, page->va, 0);
+	}
+
+	pml4_clear_page(curr->pml4, page->va);
+
+	/*by Jin-Hyuk Jang - project 3(swap in/out)*/
 }
 
 /* Destory the file backed page. PAGE will be freed by the caller. */
 static void
 file_backed_destroy (struct page *page) {
-	struct file_page *file_page UNUSED = &page->file;
+	/*by Jin-Hyuk Jang */
+
+	struct binLoadInfo *info = (struct binLoadInfo *)page->uninit.aux;
+	
+	free(info);
+
+	/*by Jin-Hyuk Jang - project 3(swap in/out)*/
 }
 
 /* Do the mmap */

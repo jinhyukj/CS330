@@ -5,6 +5,7 @@
 #include "vm/inspect.h"
 #include "threads/vaddr.h"
 #include <hash.h>
+#include "vm/anon.h"
 
 /* Edited Code - Jinhyen Kim 
    To store and manage all of the frames, we create a 
@@ -164,6 +165,17 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
+
+	/* Edited Code - Jinhyen Kim 
+	   If the page has its own frame, we need to go a layer deeper and
+	      clear its page as well. */
+
+	if (page->frame != NULL) {
+		page->frame->page = NULL;
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 	vm_dealloc_page (page);
 	return true;
 }
@@ -451,14 +463,134 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED)
 /*by Jin-Hyuk Jang - project 3 (memory management)*/
 
 /* Copy supplemental page table from src to dst */
+
+/* Edited Code - Jinhyen Kim */
 bool
 supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 		struct supplemental_page_table *src UNUSED) {
+
+	/* We copy SPT by iterating through each hash table. 
+	   Pintos offers a hash table iterator already. */
+	struct hash_iterator hashIter;
+
+	/* The hash iterator is initiated as the first entry
+	      of the src's hash table. 
+	   We are now ready to iterate through the entire 
+	      hash table. */
+	hash_first(&hashIter, &((*(src)).page_hash_table));
+
+	/* We continue as long as there is a next hash entry. */
+	while (hash_next(&hashIter)) {
+
+		/* For each hash entry, we retrieve the target page. */
+		struct page *targetPage = hash_entry(hash_cur(&hashIter), struct page, hash_elem);
+
+		/* We treat anonymous pages differently from each other. */
+		if ((*((*(targetPage)).operations)).type == VM_ANON) {
+
+			/* For anonymous pages, if the target page has no frame and we cannot
+			      generate a new frame via vm_do_claim_page, 
+			      then we have to return false. */
+			if (((*(targetPage)).frame == NULL) && (!(vm_do_claim_page(targetPage)))) {
+				return false;
+			}
+
+			/* If we cannot allocate a page, we also return false. */
+			if (!vm_alloc_page(VM_ANON, (*(targetPage)).va, (*(targetPage)).writable)) {
+				return false;
+			}
+
+			/* Of course, we also need to ensure that the destination page's frame 
+			      is also properly generated. 
+			   So, we do vm_do_claim_page again for the destination page. */
+			struct page *destPage = spt_find_page(dst, (*(targetPage)).va);
+
+			if (!(vm_do_claim_page(destPage))) {
+				return false;
+			}
+
+			/* After we check for all the faulty conditions, we simply copy the
+			      page table by memcpy(). */
+			memcpy((*((*(destPage)).frame)).kva, (*((*(targetPage)).frame)).kva, PGSIZE);
+
+		}
+
+		/* This is for file pages, and uninitialized pages. */
+		else {
+
+			/* Non-anonymous pages have an uninitialized page. The target
+			      page's information is stored in here. */
+			struct uninit_page *uninitPage = &((*(targetPage)).uninit);
+
+			/* For non-anonymous pages, we need to use the binLoadInfo that stores the
+			      information needed for lazy loading.
+			   The copy process will take place over these info structs. */
+			struct binLoadInfo *targetInfo = (*(uninitPage)).aux;
+
+			/* The destination's binLoadInfo is initialized here as well for the 
+			      copying process. */
+			struct binLoadInfo *destInfo = malloc(sizeof(struct binLoadInfo));
+
+			/* If we cannot make a new page with the correct type, then we must
+			      return false. */
+			if (!vm_alloc_page_with_initializer((*(uninitPage)).type, (*(targetPage)).va, (*(targetPage)).writable, (*(uninitPage)).init, destInfo)) {
+				return false;
+			}
+
+			/* Otherwise, we simply perform the copy process through memcpy(). */
+			memcpy(destInfo, targetInfo, sizeof(struct binLoadInfo));
+
+		}
+
+	}
+
+	/* We only reach here if the copy process is successfully performed. */
+	return true;
+
+
 }
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
+/* Edited Code - Jinhyen Kim */
+
+static void sptDestroy(struct hash_elem *e, void* aux) {
+
+	const struct page *page = hash_entry(e, struct page, hash_elem);
+
+	if ((*((*(page)).operations)).type == VM_FILE) {
+		if (pml4_is_dirty((*(thread_current())).pml4, (*(page)).va)) {
+			struct binLoadInfo *info = ((*(page)).uninit).aux;
+
+			if (file_write_at((*(info)).fileInfo, (*(page)).va, (*(info)).read_bytesInfo, (*(info)).ofsInfo) != (*(info)).read_bytesInfo) {
+				PANIC("Write Back Fail");
+			}
+			pml4_set_dirty((*(thread_current())).pml4, (*(page)).va, false);
+		}
+	}
+
+	else {
+		struct uninit_page *uninitPage = &((*(page)).uninit);
+		if ((*(uninitPage)).pageIndex != -1) {
+			bitmap_set(memFrameTable, (*(uninitPage)).pageIndex, false);
+		}
+	}
+
+	spt_remove_page(&((*(thread_current())).spt), page);
+
+}
+
+/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 /* Free the resource hold by the supplemental page table */
 void
 supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
+
+	/* Edited Code - Jinhyen Kim */
+	hash_destroy(&((*(spt)).page_hash_table), sptDestroy);
+	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
+
 }
+

@@ -72,9 +72,9 @@ process_create_initd (const char *file_name) {
 /* A thread function that launches first user process. */
 static void
 initd (void *f_name) {
-#ifdef VM
-	supplemental_page_table_init (&thread_current ()->spt);
-#endif
+//#ifdef VM
+//	supplemental_page_table_init (&thread_current ()->spt);
+//#endif
 
 	process_init ();
 
@@ -223,6 +223,9 @@ __do_fork (void *aux) {
 
 	process_activate(thread_current());
 #ifdef VM
+	/* Edited Code - Jinhyen Kim */
+	(*(thread_current())).stack_bottom = USER_STACK;
+	/* Edited Code - Jinhyen Kim */
 	supplemental_page_table_init (&((*(thread_current())).spt));
 	if (!supplemental_page_table_copy (&((*(thread_current())).spt), &parent->spt))
 		goto error;
@@ -354,6 +357,12 @@ process_exec (void *f_name) {
 
 	/* We first kill the current context */
 	process_cleanup ();
+
+#ifdef VM
+	/* Edited Code - Jinhyen Kim */
+	supplemental_page_table_init(&thread_current()->spt);
+	/* Edited Code - Jinhyen Kim */
+#endif
 
 	/* And then load the binary */
 	success = load (argv[0], &_if);
