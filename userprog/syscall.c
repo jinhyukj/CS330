@@ -107,9 +107,9 @@ struct page *checkUMA (void* userAddress) {
 	   Additionally, it now returns the page returned by the function
 	      spt_find_page. */
 
-	if (pml4_get_page(((*(thread_current ())).pml4), userAddress) == NULL) {	
-		exit(-1);
-	}
+	//if (pml4_get_page(((*(thread_current ())).pml4), userAddress) == NULL) {	
+		//exit(-1);
+	//}
 
 	else {
 		struct page *page = spt_find_page(&((*(thread_current())).spt), userAddress);
