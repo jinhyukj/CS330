@@ -497,7 +497,7 @@ void close(int fd) {
 /* Edited Code - Jinhyen Kim
    New System Calls for Project 3 */
 
-void *mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
+void *mmap (void *addr, long long length, int writable, int fd, off_t offset) {
 
 	/* There are many invalid conditions we must check:
 	   1. We check whether the given address is NULL.
