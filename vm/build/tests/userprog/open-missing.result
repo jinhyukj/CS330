@@ -1,0 +1,22 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (open-missing) begin
+  (open-missing) end
+  open-missing: exit(0)
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (open-missing) begin
+  (open-missing) end
+  open-missing: exit(0)

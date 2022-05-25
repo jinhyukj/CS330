@@ -1,0 +1,20 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (create-bad-ptr) begin
+  create-bad-ptr: exit(-1)
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (create-bad-ptr) begin
+  create-bad-ptr: exit(-1)

@@ -1,0 +1,29 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (write-normal) begin
+  (write-normal) create "test.txt"
+  (write-normal) open "test.txt"
+  (write-normal) end
+  write-normal: exit(0)
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (write-normal) begin
+  (write-normal) create "test.txt"
++ file_write_at
++ file_write_at
+  (write-normal) open "test.txt"
++ file_wirte 
+  (write-normal) end
+  write-normal: exit(0)

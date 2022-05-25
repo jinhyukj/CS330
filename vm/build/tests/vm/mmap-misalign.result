@@ -1,0 +1,26 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (mmap-misalign) begin
+  (mmap-misalign) open "sample.txt"
+  (mmap-misalign) try to mmap at misaligned address
+  (mmap-misalign) end
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (mmap-misalign) begin
+  (mmap-misalign) open "sample.txt"
+  (mmap-misalign) try to mmap at misaligned address
+  (mmap-misalign) end
+
+(Process exit codes are excluded for matching purposes.)

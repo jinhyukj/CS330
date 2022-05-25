@@ -1,0 +1,45 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (sm-create) begin
+  (sm-create) create "blargle"
+  (sm-create) open "blargle" for verification
+  (sm-create) verified contents of "blargle"
+  (sm-create) close "blargle"
+  (sm-create) end
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (sm-create) begin
+  (sm-create) create "blargle"
++ file_write_at
++ file_write_at
+  (sm-create) open "blargle" for verification
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (sm-create) verified contents of "blargle"
+  (sm-create) close "blargle"
+  (sm-create) end
+
+(Process exit codes are excluded for matching purposes.)

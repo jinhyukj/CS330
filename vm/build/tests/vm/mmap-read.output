@@ -1,0 +1,159 @@
+Kernel command line: -q -f put mmap-read put sample.txt run mmap-read
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  104,755,200 loops/s.
+hd0:0: detected 337 sector (168 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 110 sector (55 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+hd1:1: detected 8,064 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00004"
+Formatting file system...file_write_at
+file_write_at
+done.
+file_read_at
+Boot complete.
+Putting 'mmap-read' into the file system...
+file_write_at
+file_write_at
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+file_wirte 
+Putting 'sample.txt' into the file system...
+file_write_at
+file_write_at
+file_wirte 
+file_wirte 
+Executing 'mmap-read':
+file_read 
+file_read 
+file_read 
+file_read 
+file_read 
+file_read 
+file_read 
+file_read 
+file_read 
+file_read 
+(mmap-read) begin
+(mmap-read) open "sample.txt"
+(mmap-read) mmap "sample.txt"
+file_read 
+file_read 
+(mmap-read) end
+mmap-read: exit(0)
+Execution of 'mmap-read' complete.
+Timer: 97 ticks
+Thread: 33 idle ticks, 61 kernel ticks, 3 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 123 reads, 258 writes
+hd1:0: 110 reads, 0 writes
+hd1:1: 0 reads, 0 writes
+Console: 2593 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

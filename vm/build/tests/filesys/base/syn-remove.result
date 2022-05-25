@@ -1,0 +1,40 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (syn-remove) begin
+  (syn-remove) create "deleteme"
+  (syn-remove) open "deleteme"
+  (syn-remove) remove "deleteme"
+  (syn-remove) write "deleteme"
+  (syn-remove) seek "deleteme" to 0
+  (syn-remove) read "deleteme"
+  (syn-remove) close "deleteme"
+  (syn-remove) end
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (syn-remove) begin
+  (syn-remove) create "deleteme"
++ file_write_at
++ file_write_at
+  (syn-remove) open "deleteme"
+  (syn-remove) remove "deleteme"
+  (syn-remove) write "deleteme"
++ file_wirte 
+  (syn-remove) seek "deleteme" to 0
+  (syn-remove) read "deleteme"
++ file_read 
+  (syn-remove) close "deleteme"
+  (syn-remove) end
+
+(Process exit codes are excluded for matching purposes.)

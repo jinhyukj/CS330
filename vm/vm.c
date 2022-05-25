@@ -7,96 +7,99 @@
 #include <hash.h>
 #include "vm/anon.h"
 
-/* Edited Code - Jinhyen Kim 
-   To store and manage all of the frames, we create a 
-      list of frames as well as the list_elem to use 
-      for the list. */
+/* Edited Code - Jinhyen Kim
+   To store and manage all of the frames, we create a
+	  list of frames as well as the list_elem to use
+	  for the list. */
 
 struct list frameTable;
 struct list_elem *frameElem;
 
 /* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
-
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
-void
-vm_init (void) {
-	vm_anon_init ();
-	vm_file_init ();
-#ifdef EFILESYS  /* For project 4 */
-	pagecache_init ();
+void vm_init(void)
+{
+	vm_anon_init();
+	vm_file_init();
+#ifdef EFILESYS /* For project 4 */
+	pagecache_init();
 #endif
-	register_inspect_intr ();
+	register_inspect_intr();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
 
-	/* Edited Code - Jinhyen Kim 
-	   When a virtual machine is initialized, we need to initialize the 
-	      frame table as well. */
+	/* Edited Code - Jinhyen Kim
+	   When a virtual machine is initialized, we need to initialize the
+		  frame table as well. */
 
 	list_init(&(frameTable));
 	frameElem = list_begin(&(frameTable));
 
 	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
-
 }
 
 /* Get the type of the page. This function is useful if you want to know the
  * type of the page after it will be initialized.
  * This function is fully implemented now. */
 enum vm_type
-page_get_type (struct page *page) {
-	int ty = VM_TYPE (page->operations->type);
-	switch (ty) {
-		case VM_UNINIT:
-			return VM_TYPE (page->uninit.type);
-		default:
-			return ty;
+page_get_type(struct page *page)
+{
+	int ty = VM_TYPE(page->operations->type);
+	switch (ty)
+	{
+	case VM_UNINIT:
+		return VM_TYPE(page->uninit.type);
+	default:
+		return ty;
 	}
 }
 
 /* Helpers */
-static struct frame *vm_get_victim (void);
-static bool vm_do_claim_page (struct page *page);
-static struct frame *vm_evict_frame (void);
+static struct frame *vm_get_victim(void);
+static bool vm_do_claim_page(struct page *page);
+static struct frame *vm_evict_frame(void);
 
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
  * `vm_alloc_page`. */
-bool
-vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
-		vm_initializer *init, void *aux) {
+bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writable,
+									vm_initializer *init, void *aux)
+{
 
-	ASSERT (VM_TYPE(type) != VM_UNINIT)
+	ASSERT(VM_TYPE(type) != VM_UNINIT)
 
-	struct supplemental_page_table *spt = &thread_current ()->spt;
+	struct supplemental_page_table *spt = &thread_current()->spt;
 
 	/* Check wheter the upage is already occupied or not. */
-	if (spt_find_page (spt, upage) == NULL) {
+	if (spt_find_page(spt, upage) == NULL)
+	{
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
 
 		/* Edited Code - Jinhyen Kim
 		   1. To create a new page, we first need to get memory allocation for
-		         the page with malloc(). 
+				 the page with malloc().
 		   2. Once we have the memory space, we define a new page with the
-		         given VM type. 
-		   3. Depending on the VM type, we use a different initializer. 
-		   4. Then, we create a new uninit page by calling uninit_new(). 
-		         For the new uninitialized page, we set its "writable"
-		         status as given by the function, as well as its 
-		         current thread. */
+				 given VM type.
+		   3. Depending on the VM type, we use a different initializer.
+		   4. Then, we create a new uninit page by calling uninit_new().
+				 For the new uninitialized page, we set its "writable"
+				 status as given by the function, as well as its
+				 current thread. */
 
 		struct page *newUninitPage = malloc(sizeof(struct page));
-		
-		bool (*pageInit) (struct page *, enum vm_type);
 
-		if (VM_TYPE(type) == VM_FILE) {
+		bool (*pageInit)(struct page *, enum vm_type);
+
+		if (VM_TYPE(type) == VM_FILE)
+		{
 			pageInit = file_backed_initializer;
 		}
-		else if (VM_TYPE(type) == VM_ANON) {
+		else if (VM_TYPE(type) == VM_ANON)
+		{
 			pageInit = anon_initializer;
 		}
 
@@ -112,7 +115,6 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		return true;
 
 		/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
-
 	}
 err:
 	return false;
@@ -120,7 +122,8 @@ err:
 
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
-spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
+spt_find_page(struct supplemental_page_table *spt UNUSED, void *va UNUSED)
+{
 	struct page *page = NULL;
 	/* TODO: Fill this function. */
 
@@ -143,9 +146,9 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 }
 
 /* Insert PAGE into spt with validation. */
-bool
-spt_insert_page (struct supplemental_page_table *spt UNUSED,
-		struct page *page UNUSED) {
+bool spt_insert_page(struct supplemental_page_table *spt UNUSED,
+					 struct page *page UNUSED)
+{
 	int succ = false;
 	/* TODO: Fill this function. */
 
@@ -163,28 +166,30 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 	return succ;
 }
 
-void
-spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
+void spt_remove_page(struct supplemental_page_table *spt, struct page *page)
+{
 
-	/* Edited Code - Jinhyen Kim 
+	/* Edited Code - Jinhyen Kim
 	   If the page has its own frame, we need to go a layer deeper and
-	      clear its page as well. */
+		  clear its page as well. */
 
-	if (page->frame != NULL) {
+	if (page->frame != NULL)
+	{
 		page->frame->page = NULL;
 	}
 
 	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
-	vm_dealloc_page (page);
+	vm_dealloc_page(page);
 	return true;
 }
 
 /* Get the struct frame, that will be evicted. */
 static struct frame *
-vm_get_victim (void) {
+vm_get_victim(void)
+{
 	struct frame *victim = NULL;
-	 /* TODO: The policy for eviction is up to you. */
+	/* TODO: The policy for eviction is up to you. */
 
 	/*by Jin-Hyuk Jang
 	we get the victim frame from the frame table */
@@ -197,11 +202,12 @@ vm_get_victim (void) {
 
 		victim = list_entry(frameElem, struct frame, elem);
 
-		if (victim->page == NULL) {
+		if (victim->page == NULL)
+		{
 			return victim;
 		}
-	
-		frameOwner = victim->page->thread;	
+
+		frameOwner = victim->page->thread;
 
 		if (pml4_is_accessed(frameOwner->pml4, victim->page->va))
 			pml4_set_accessed(frameOwner->pml4, victim->page->va, 0);
@@ -214,11 +220,12 @@ vm_get_victim (void) {
 
 		victim = list_entry(frameElem, struct frame, elem);
 
-		if (victim->page == NULL) {
+		if (victim->page == NULL)
+		{
 			return victim;
 		}
 
-		frameOwner = victim->page->thread;	
+		frameOwner = victim->page->thread;
 
 		if (pml4_is_accessed(frameOwner->pml4, victim->page->va))
 			pml4_set_accessed(frameOwner->pml4, victim->page->va, 0);
@@ -234,8 +241,9 @@ vm_get_victim (void) {
 /* Evict one page and return the corresponding frame.
  * Return NULL on error.*/
 static struct frame *
-vm_evict_frame (void) {
-	struct frame *victim UNUSED = vm_get_victim ();
+vm_evict_frame(void)
+{
+	struct frame *victim UNUSED = vm_get_victim();
 	/* TODO: swap out the victim and return the evicted frame. */
 
 	/*by Jin-Hyuk Jang
@@ -254,7 +262,8 @@ vm_evict_frame (void) {
  * memory is full, this function evicts the frame to get the available memory
  * space.*/
 static struct frame *
-vm_get_frame (void) {
+vm_get_frame(void)
+{
 	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
 	/*by Jin-Hyuk Jang
@@ -275,7 +284,8 @@ vm_get_frame (void) {
 	else
 	{
 		frame = vm_evict_frame();
-		if (frame->page != NULL) {
+		if (frame->page != NULL)
+		{
 			frame->page->frame = NULL;
 			frame->page = NULL;
 		}
@@ -290,24 +300,27 @@ vm_get_frame (void) {
 
 /* Edited Code - Jinhyen Kim
    This is only called in the situation where a page fault
-      can be handled with a stack growth. 
+	  can be handled with a stack growth.
    More specifically, we allocate additional anonymous pages
-      to the stack until the given address is no longer 
-      invalid. */
+	  to the stack until the given address is no longer
+	  invalid. */
 
 static bool
-vm_stack_growth (void *addr UNUSED) {
+vm_stack_growth(void *addr UNUSED)
+{
 
-	/* We create an uninit page for the stack which becomes anonymous. 
+	/* We create an uninit page for the stack which becomes anonymous.
 	   If this is successful, we can expand the stack by taking
-	      the current thread's stack_bottom and lowering it
-	      by PGSIZE. */
+		  the current thread's stack_bottom and lowering it
+		  by PGSIZE. */
 
-	if (vm_alloc_page(VM_ANON | VM_MARKER_0, addr, true)) {
+	if (vm_alloc_page(VM_ANON | VM_MARKER_0, addr, true))
+	{
 		(*(thread_current())).stack_bottom = ((*(thread_current())).stack_bottom) - PGSIZE;
 		return true;
 	}
-	else {
+	else
+	{
 		return false;
 	}
 }
@@ -316,65 +329,73 @@ vm_stack_growth (void *addr UNUSED) {
 
 /* Handle the fault on write_protected page */
 static bool
-vm_handle_wp (struct page *page UNUSED) {
+vm_handle_wp(struct page *page UNUSED)
+{
 }
 
 /* Return true on success */
-bool
-vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
-		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
+bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
+						 bool user UNUSED, bool write UNUSED, bool not_present UNUSED)
+{
+	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
 
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 
 	/* Edited Code - Jinhyen Kim
 	   Before we declare *page, we need to check for two cases where
-	      we should immediately return the function instead.
+		  we should immediately return the function instead.
 	   1. If the page address is not user address, it is invalid.
 	   2. Alternatively, if not_present is false, then it is
-	         also invalid. */
+			 also invalid. */
 
-	if (!(is_user_vaddr(addr))) {
+	if (!(is_user_vaddr(addr)))
+	{
 		return false;
 	}
-	else if (!(not_present)) {
+	else if (!(not_present))
+	{
 		return false;
 	}
 
 	/* Now, we can declare *page. */
 
 	struct page *page = spt_find_page(spt, addr);
-
 	/* If we are in user mode, rsp is provided by the interrupt frame.
-	   If we are in the kernel mode, rsp is provided by the current 
-	      thread's stored user rsp instead. */
+	   If we are in the kernel mode, rsp is provided by the current
+		  thread's stored user rsp instead. */
 
 	void *rsp = NULL;
-	if (user) {
+	if (user)
+	{
 		rsp = (*(f)).rsp;
 	}
-	else {
+	else
+	{
 		rsp = (*(thread_current())).currentRsp;
 	}
 
-	if (page == NULL) {
+	if (page == NULL)
+	{
 
 		/**/
-		if ((USER_STACK > addr) && (addr >= (USER_STACK - (1<<20))) && (addr >= rsp - 10)) {
+		if ((USER_STACK > addr) && (addr >= (USER_STACK - (1 << 20))) && (addr >= rsp - 10))
+		{
 
 			void *fpage = ((*(thread_current())).stack_bottom) - PGSIZE;
 
-			if (vm_stack_growth (fpage)) {
+			if (vm_stack_growth(fpage))
+			{
 				page = spt_find_page(spt, fpage);
-				return vm_do_claim_page (page);
-			} 
+				return vm_do_claim_page(page);
+			}
 		}
 
 		return false;
 	}
-	else {
-		return vm_do_claim_page (page);
+	else
+	{
+		return vm_do_claim_page(page);
 	}
 
 	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
@@ -382,15 +403,15 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 
 /* Free the page.
  * DO NOT MODIFY THIS FUNCTION. */
-void
-vm_dealloc_page (struct page *page) {
-	destroy (page);
-	free (page);
+void vm_dealloc_page(struct page *page)
+{
+	destroy(page);
+	free(page);
 }
 
 /* Claim the page that allocate on VA. */
-bool
-vm_claim_page (void *va UNUSED) {
+bool vm_claim_page(void *va UNUSED)
+{
 	struct page *page = NULL;
 	/* TODO: Fill this function */
 
@@ -409,8 +430,9 @@ vm_claim_page (void *va UNUSED) {
 
 /* Claim the PAGE and set up the mmu. */
 static bool
-vm_do_claim_page (struct page *page) {
-	struct frame *frame = vm_get_frame ();
+vm_do_claim_page(struct page *page)
+{
+	struct frame *frame = vm_get_frame();
 
 	/* Set links */
 	frame->page = page;
@@ -465,132 +487,141 @@ void supplemental_page_table_init(struct supplemental_page_table *spt UNUSED)
 /* Copy supplemental page table from src to dst */
 
 /* Edited Code - Jinhyen Kim */
-bool
-supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
-		struct supplemental_page_table *src UNUSED) {
+bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED,
+								  struct supplemental_page_table *src UNUSED)
+{
 
-	/* We copy SPT by iterating through each hash table. 
+	/* We copy SPT by iterating through each hash table.
 	   Pintos offers a hash table iterator already. */
 	struct hash_iterator hashIter;
 
 	/* The hash iterator is initiated as the first entry
-	      of the src's hash table. 
-	   We are now ready to iterate through the entire 
-	      hash table. */
+		  of the src's hash table.
+	   We are now ready to iterate through the entire
+		  hash table. */
 	hash_first(&hashIter, &((*(src)).page_hash_table));
 
 	/* We continue as long as there is a next hash entry. */
-	while (hash_next(&hashIter)) {
+	while (hash_next(&hashIter))
+	{
 
 		/* For each hash entry, we retrieve the target page. */
 		struct page *targetPage = hash_entry(hash_cur(&hashIter), struct page, hash_elem);
 
 		/* We treat anonymous pages differently from each other. */
-		if ((*((*(targetPage)).operations)).type == VM_ANON) {
+		if ((*((*(targetPage)).operations)).type == VM_ANON)
+		{
 
 			/* For anonymous pages, if the target page has no frame and we cannot
-			      generate a new frame via vm_do_claim_page, 
-			      then we have to return false. */
-			if (((*(targetPage)).frame == NULL) && (!(vm_do_claim_page(targetPage)))) {
+				  generate a new frame via vm_do_claim_page,
+				  then we have to return false. */
+			if (((*(targetPage)).frame == NULL) && (!(vm_do_claim_page(targetPage))))
+			{
 				return false;
 			}
 
 			/* If we cannot allocate a page, we also return false. */
-			if (!vm_alloc_page(VM_ANON, (*(targetPage)).va, (*(targetPage)).writable)) {
+			if (!vm_alloc_page(VM_ANON, (*(targetPage)).va, (*(targetPage)).writable))
+			{
 				return false;
 			}
 
-			/* Of course, we also need to ensure that the destination page's frame 
-			      is also properly generated. 
+			/* Of course, we also need to ensure that the destination page's frame
+				  is also properly generated.
 			   So, we do vm_do_claim_page again for the destination page. */
 			struct page *destPage = spt_find_page(dst, (*(targetPage)).va);
 
-			if (!(vm_do_claim_page(destPage))) {
+			/*Child's page has same write_protected value with Parent's page being copied*/
+			destPage->write_protected = targetPage->write_protected;
+
+			destPage->frame->kva = targetPage->frame->kva;
+			if (!(vm_do_claim_page(destPage)))
+			{
 				return false;
 			}
 
 			/* After we check for all the faulty conditions, we simply copy the
-			      page table by memcpy(). */
+				  page table by memcpy(). */
 			memcpy((*((*(destPage)).frame)).kva, (*((*(targetPage)).frame)).kva, PGSIZE);
-
 		}
 
 		/* This is for file pages, and uninitialized pages. */
-		else {
+		else
+		{
 
 			/* Non-anonymous pages have an uninitialized page. The target
-			      page's information is stored in here. */
+				  page's information is stored in here. */
 			struct uninit_page *uninitPage = &((*(targetPage)).uninit);
 
 			/* For non-anonymous pages, we need to use the binLoadInfo that stores the
-			      information needed for lazy loading.
+				  information needed for lazy loading.
 			   The copy process will take place over these info structs. */
 			struct binLoadInfo *targetInfo = (*(uninitPage)).aux;
 
-			/* The destination's binLoadInfo is initialized here as well for the 
-			      copying process. */
+			/* The destination's binLoadInfo is initialized here as well for the
+				  copying process. */
 			struct binLoadInfo *destInfo = malloc(sizeof(struct binLoadInfo));
 
 			/* If we cannot make a new page with the correct type, then we must
-			      return false. */
-			if (!vm_alloc_page_with_initializer((*(uninitPage)).type, (*(targetPage)).va, (*(targetPage)).writable, (*(uninitPage)).init, destInfo)) {
+				  return false. */
+			if (!vm_alloc_page_with_initializer((*(uninitPage)).type, (*(targetPage)).va, (*(targetPage)).writable, (*(uninitPage)).init, destInfo))
+			{
 				return false;
 			}
 
 			/* Otherwise, we simply perform the copy process through memcpy(). */
 			memcpy(destInfo, targetInfo, sizeof(struct binLoadInfo));
-
 		}
-
 	}
 
 	/* We only reach here if the copy process is successfully performed. */
 	return true;
-
-
 }
 
 /* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 /* Edited Code - Jinhyen Kim */
 
-static void sptDestroy(struct hash_elem *e, void* aux) {
+static void sptDestroy(struct hash_elem *e, void *aux)
+{
 
 	const struct page *page = hash_entry(e, struct page, hash_elem);
 
-	if ((*((*(page)).operations)).type == VM_FILE) {
-		if (pml4_is_dirty((*(thread_current())).pml4, (*(page)).va)) {
+	if ((*((*(page)).operations)).type == VM_FILE)
+	{
+		if (pml4_is_dirty((*(thread_current())).pml4, (*(page)).va))
+		{
 			struct binLoadInfo *info = ((*(page)).uninit).aux;
 
-			if (file_write_at((*(info)).fileInfo, (*(page)).va, (*(info)).read_bytesInfo, (*(info)).ofsInfo) != (*(info)).read_bytesInfo) {
+			if (file_write_at((*(info)).fileInfo, (*(page)).va, (*(info)).read_bytesInfo, (*(info)).ofsInfo) != (*(info)).read_bytesInfo)
+			{
 				PANIC("Write Back Fail");
 			}
 			pml4_set_dirty((*(thread_current())).pml4, (*(page)).va, false);
 		}
 	}
 
-	else {
+	else
+	{
 		struct uninit_page *uninitPage = &((*(page)).uninit);
-		if ((*(uninitPage)).pageIndex != -1) {
+		if ((*(uninitPage)).pageIndex != -1)
+		{
 			bitmap_set(memFrameTable, (*(uninitPage)).pageIndex, false);
 		}
 	}
 
 	spt_remove_page(&((*(thread_current())).spt), page);
-
 }
 
 /* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
 
 /* Free the resource hold by the supplemental page table */
-void
-supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
+void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
+{
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
 
 	/* Edited Code - Jinhyen Kim */
 	hash_destroy(&((*(spt)).page_hash_table), sptDestroy);
 	/* Edited Code - Jinhyen Kim (Project 3 - Anonymous Page) */
-
 }
-

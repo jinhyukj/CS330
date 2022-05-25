@@ -1,0 +1,50 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (create-empty) begin
+  create-empty: exit(-1)
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (create-empty) begin
+- create-empty: exit(-1)
++ file_write_at
++ file_write_at
++ file_write_at
++ (create-empty) create(""): 0
++ (create-empty) end
++ create-empty: exit(0)
+Acceptable output:
+  (create-empty) begin
+  (create-empty) create(""): 0
+  (create-empty) end
+  create-empty: exit(0)
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (create-empty) begin
++ file_write_at
++ file_write_at
++ file_write_at
+  (create-empty) create(""): 0
+  (create-empty) end
+  create-empty: exit(0)

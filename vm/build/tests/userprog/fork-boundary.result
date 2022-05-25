@@ -1,0 +1,31 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (fork-boundary) begin
+  (fork-boundary) child run
+  child-simple: exit(54)
+  (fork-boundary) fork
+  (fork-boundary) wait
+  (fork-boundary) end
+  fork-boundary: exit(0)
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (fork-boundary) begin
++ file_read 
+  (fork-boundary) child run
+  child-simple: exit(54)
+  (fork-boundary) fork
+  (fork-boundary) wait
+  (fork-boundary) end
+  fork-boundary: exit(0)

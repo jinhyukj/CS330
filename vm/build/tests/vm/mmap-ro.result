@@ -1,0 +1,27 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (mmap-ro) begin
+  (mmap-ro) open "large.txt"
+  (mmap-ro) mmap "large.txt" with writable=0
+  (mmap-ro) about to write into read-only mmap'd memory
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (mmap-ro) begin
+  (mmap-ro) open "large.txt"
+  (mmap-ro) mmap "large.txt" with writable=0
+  (mmap-ro) about to write into read-only mmap'd memory
++ file_read 
+
+(Process exit codes are excluded for matching purposes.)

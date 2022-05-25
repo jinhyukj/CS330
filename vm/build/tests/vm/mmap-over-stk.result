@@ -1,0 +1,26 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (mmap-over-stk) begin
+  (mmap-over-stk) open "sample.txt"
+  (mmap-over-stk) try to mmap over stack segment
+  (mmap-over-stk) end
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (mmap-over-stk) begin
+  (mmap-over-stk) open "sample.txt"
+  (mmap-over-stk) try to mmap over stack segment
+  (mmap-over-stk) end
+
+(Process exit codes are excluded for matching purposes.)

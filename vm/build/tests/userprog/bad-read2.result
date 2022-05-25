@@ -1,0 +1,22 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (bad-read2) begin
+  bad-read2: exit(-1)
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (bad-read2) begin
+  bad-read2: exit(-1)
+
+(User fault messages are excluded for matching purposes.)

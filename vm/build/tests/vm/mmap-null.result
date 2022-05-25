@@ -1,0 +1,26 @@
+FAIL
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (mmap-null) begin
+  (mmap-null) open "sample.txt"
+  (mmap-null) try to mmap at address 0
+  (mmap-null) end
+Differences in `diff -u' format:
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
++ file_read 
+  (mmap-null) begin
+  (mmap-null) open "sample.txt"
+  (mmap-null) try to mmap at address 0
+  (mmap-null) end
+
+(Process exit codes are excluded for matching purposes.)
