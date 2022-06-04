@@ -7,6 +7,13 @@
         "interrupt.h": "c",
         "palloc.h": "c",
         "fp-arithmetic.h": "c",
-        "debug.h": "c"
+        "debug.h": "c",
+        "*.inc": "c",
+        "*.tcc": "c",
+        "istream": "c",
+        "ostream": "c",
+        "list.h": "c",
+        "free-map.h": "c",
+        "inode.h": "c"
     }
 }

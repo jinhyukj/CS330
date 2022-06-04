@@ -1,0 +1,17 @@
+Kernel command line: -q -f put create-bound run create-bound
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  144,793,600 loops/s.
+hd0:0: detected 337 sector (168 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 105 sector (52 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+hd1:1: detected 8,064 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00004"
+Formatting file system...Kernel PANIC at ../../threads/malloc.c:249 in block_to_arena(): assertion `a->magic == ARENA_MAGIC' failed.
+Call stack: 0x800421464c 0x800420cb3e 0x800420c907 0x800421c8e2 0x800421bf2b 0x800421a865 0x800421a5c3 0x8004206151.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Kernel PANIC recursion at ../../devices/timer.c:212 in real_time_sleep().

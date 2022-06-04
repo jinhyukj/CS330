@@ -11,47 +11,47 @@
 /* The disk that contains the file system. */
 struct disk *filesys_disk;
 
-static void do_format (void);
+static void do_format(void);
 
 /* Initializes the file system module.
  * If FORMAT is true, reformats the file system. */
-void
-filesys_init (bool format) {
-	filesys_disk = disk_get (0, 1);
+void filesys_init(bool format)
+{
+	filesys_disk = disk_get(0, 1);
 	if (filesys_disk == NULL)
-		PANIC ("hd0:1 (hdb) not present, file system initialization failed");
+		PANIC("hd0:1 (hdb) not present, file system initialization failed");
 
-	inode_init ();
+	inode_init();
 
 	lock_init(&fileSysLock);
 
 #ifdef EFILESYS
-	fat_init ();
+	fat_init();
 
 	if (format)
-		do_format ();
+		do_format();
 
-	fat_open ();
+	fat_open();
 #else
 	/* Original FS */
-	free_map_init ();
+	free_map_init();
 
 	if (format)
-		do_format ();
+		do_format();
 
-	free_map_open ();
+	free_map_open();
 #endif
 }
 
 /* Shuts down the file system module, writing any unwritten data
  * to disk. */
-void
-filesys_done (void) {
+void filesys_done(void)
+{
 	/* Original FS */
 #ifdef EFILESYS
-	fat_close ();
+	fat_close();
 #else
-	free_map_close ();
+	free_map_close();
 #endif
 }
 
@@ -59,20 +59,20 @@ filesys_done (void) {
  * Returns true if successful, false otherwise.
  * Fails if a file named NAME already exists,
  * or if internal memory allocation fails. */
-bool
-filesys_create (const char *name, off_t initial_size) {
+bool filesys_create(const char *name, off_t initial_size)
+{
 
 	lock_acquire(&fileSysLock);
 
 	disk_sector_t inode_sector = 0;
-	struct dir *dir = dir_open_root ();
+	struct dir *dir = dir_open_root();
 	bool success = (dir != NULL
-			&& free_map_allocate (1, &inode_sector)
-			&& inode_create (inode_sector, initial_size)
-			&& dir_add (dir, name, inode_sector));
+					//&& free_map_allocate (1, &inode_sector)
+					&& !inode_sector && inode_create(inode_sector, initial_size) && dir_add(dir, name, inode_sector));
 	if (!success && inode_sector != 0)
-		free_map_release (inode_sector, 1);
-	dir_close (dir);
+		// free_map_release (inode_sector, 1);
+		fat_remove_chain(inode_sector, 0);
+	dir_close(dir);
 
 	lock_release(&fileSysLock);
 
@@ -85,37 +85,37 @@ filesys_create (const char *name, off_t initial_size) {
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
 struct file *
-filesys_open (const char *name) {
+filesys_open(const char *name)
+{
 
 	lock_acquire(&fileSysLock);
 
-	struct dir *dir = dir_open_root ();
+	struct dir *dir = dir_open_root();
 	struct inode *inode = NULL;
 
 	if (dir != NULL)
-		dir_lookup (dir, name, &inode);
-	dir_close (dir);
+		dir_lookup(dir, name, &inode);
+	dir_close(dir);
 
-	struct file *file = file_open (inode);
+	struct file *file = file_open(inode);
 
 	lock_release(&fileSysLock);
 
 	return file;
-
 }
 
 /* Deletes the file named NAME.
  * Returns true if successful, false on failure.
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
-bool
-filesys_remove (const char *name) {
+bool filesys_remove(const char *name)
+{
 
 	lock_acquire(&fileSysLock);
 
-	struct dir *dir = dir_open_root ();
-	bool success = dir != NULL && dir_remove (dir, name);
-	dir_close (dir);
+	struct dir *dir = dir_open_root();
+	bool success = dir != NULL && dir_remove(dir, name);
+	dir_close(dir);
 
 	lock_release(&fileSysLock);
 
@@ -124,19 +124,24 @@ filesys_remove (const char *name) {
 
 /* Formats the file system. */
 static void
-do_format (void) {
-	printf ("Formatting file system...");
+do_format(void)
+{
+	printf("Formatting file system...");
 
 #ifdef EFILESYS
 	/* Create FAT and save it to the disk. */
-	fat_create ();
-	fat_close ();
+	fat_create();
+	if (!dir_create(ROOT_DIR_SECTOR, 16))
+	{
+		PANIC("---ERROR // do_format // ROOT_DIR CREATION FAILED\N");
+	}
+	fat_close();
 #else
-	free_map_create ();
-	if (!dir_create (ROOT_DIR_SECTOR, 16))
-		PANIC ("root directory creation failed");
-	free_map_close ();
+	free_map_create();
+	if (!dir_create(ROOT_DIR_SECTOR, 16))
+		PANIC("root directory creation failed");
+	free_map_close();
 #endif
 
-	printf ("done.\n");
+	printf("done.\n");
 }
