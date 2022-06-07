@@ -17,7 +17,7 @@ struct fat_boot
 	unsigned int root_dir_cluster;
 
 	/*by Jin-Hyuk Jang*/
-	unsigned int num_free_blocks;
+	// unsigned int num_free_blocks;
 	/*by Jin-Hyuk Jang*/
 };
 
@@ -28,11 +28,11 @@ struct fat_fs
 	unsigned int *fat;
 	unsigned int fat_length;
 	disk_sector_t data_start;
-	cluster_t last_clst;
+	cluster_t data_last;
 	struct lock write_lock;
 
 	/*by Jin-Hyuk Jang*/
-	unsigned int num_free_blocks;
+	// unsigned int num_free_blocks;
 	/*by Jin-Hyuk Jang*/
 };
 
@@ -154,8 +154,8 @@ void fat_create(void)
 
 	/*by Jin-Hyuk Jang
 	create linked list for empty sectors of fat*/
-	uint32_t i = 0;
-	for (i; i < fat_fs->bs.total_sectors - 1; i++)
+	/*uint32_t i = 0;
+	for (i; i < fat_fs->data_last; i++)
 	{
 		fat_fs->fat[i] = i + 1;
 	}
@@ -166,7 +166,7 @@ void fat_create(void)
 
 	fat_put(fat_fs->bs.fat_start + fat_fs->bs.fat_sectors - 1, EOChain);
 
-	fat_put(fat_fs->bs.total_sectors - 1, EOChain);
+	fat_put(fat_fs->bs.total_sectors - 1, EOChain);*/
 	/*by jin-Hyuk Jang*/
 }
 
@@ -183,7 +183,7 @@ void fat_boot_create(void)
 		.root_dir_cluster = ROOT_DIR_CLUSTER,
 
 		/*by Jin-Hyuk Jang*/
-		.num_free_blocks = disk_size(filesys_disk) - fat_sectors - 4,
+		//.num_free_blocks = disk_size(filesys_disk) - fat_sectors - 4,
 		/*by Jin-Hyuk Jang*/
 	};
 }
@@ -192,9 +192,9 @@ void fat_fs_init(void)
 {
 	/* TODO: Your code goes here. */
 	fat_fs->fat = NULL;
-	fat_fs->fat_length = fat_fs->bs.fat_sectors;
+	fat_fs->fat_length = fat_fs->bs.fat_sectors * DISK_SECTOR_SIZE / (sizeof(cluster_t));
 	fat_fs->data_start = fat_fs->bs.fat_start + fat_fs->bs.fat_sectors;
-	fat_fs->num_free_blocks = fat_fs->bs.num_free_blocks;
+	fat_fs->data_last = fat_fs->bs.total_sectors - 1;
 	lock_init(&fat_fs->write_lock);
 }
 
@@ -203,7 +203,7 @@ void fat_fs_init(void)
 /*----------------------------------------------------------------------------*/
 
 /*by Jin-Hyuk Jang*/
-cluster_t get_free_cluster(void)
+/*cluster_t get_free_cluster(void)
 {
 	cluster_t clst = fat_get(fat_fs->data_start);
 	if (clst != fat_fs->bs.total_sectors - 1)
@@ -215,7 +215,7 @@ cluster_t get_free_cluster(void)
 		return clst;
 	}
 	return -1;
-}
+}*/
 /*by Jin-Hyuk Jang*/
 
 /* Add a cluster to the chain.
@@ -225,7 +225,7 @@ cluster_t
 fat_create_chain(cluster_t clst)
 {
 	/* TODO: Your code goes here. */
-	cluster_t free_clst = get_free_cluster();
+	/*cluster_t free_clst = get_free_cluster();
 
 	if (clst != -1)
 	{
@@ -235,7 +235,7 @@ fat_create_chain(cluster_t clst)
 		}
 		return free_clst;
 	}
-	return 0;
+	return 0;*/
 }
 
 /* Remove the chain of clusters starting from CLST.
