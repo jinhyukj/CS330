@@ -57,8 +57,8 @@ byte_to_sector(const struct inode *inode, off_t pos)
 		{
 			clst = fat_get(clst);
 		}
-		return clst;
-		// return inode->data.start + pos / DISK_SECTOR_SIZE;
+		// return clst;
+		return inode->data.start + pos / DISK_SECTOR_SIZE;
 	}
 	else
 		return -1;
@@ -96,19 +96,55 @@ bool inode_create(disk_sector_t sector, off_t length)
 		size_t sectors = bytes_to_sectors(length);
 		disk_inode->length = length;
 		disk_inode->magic = INODE_MAGIC;
-		// if (free_map_allocate (sectors, &disk_inode->start)) {
-		// 	disk_write (filesys_disk, sector, disk_inode);
-		// 	if (sectors > 0) {
-		// 		static char zeros[DISK_SECTOR_SIZE];
-		// 		size_t i;
 
-		// 		for (i = 0; i < sectors; i++)
-		// 			disk_write (filesys_disk, disk_inode->start + i, zeros);
-		// 	}
-		// 	success = true;
-		// }
-		/*by Jin-Hyuk Jang*/
-		if (set_num_free_blocks(0) >= sectors)
+#ifdef EFILESYS
+		cluster_t clst = sector_to_cluster(sector);
+		cluster_t cur = clst;
+
+		if (sectors == 0)
+			disk_inode->start = cluster_to_sector(fat_create_chain(cur));
+		for (int i = 0; i < sectors; i++)
+		{
+			cur = fat_create_chain(cur);
+			if (cur == 0)
+			{
+				fat_remove_chain(clst, 0);
+				free(disk_inode);
+				return false;
+			}
+			if (i == 0)
+			{
+				clst = cur;
+				disk_inode->start = cluster_to_sector(cur);
+			}
+		}
+		disk_write(filesys_disk, sector, disk_inode);
+		if (sectors > 0)
+		{
+			static char zeros[DISK_SECTOR_SIZE];
+			for (int i = 0; i < sectors; i++)
+			{
+				disk_write(filesys_disk, cluster_to_sector(clst), zeros);
+				clst = fat_get(clst);
+			}
+		}
+		success = true;
+#else
+		if (free_map_allocate(sectors, &disk_inode->start))
+		{
+			disk_write(filesys_disk, sector, disk_inode);
+			if (sectors > 0)
+			{
+				static char zeros[DISK_SECTOR_SIZE];
+				size_t i;
+
+				for (i = 0; i < sectors; i++)
+					disk_write(filesys_disk, disk_inode->start + i, zeros);
+			}
+			success = true;
+		}
+/*by Jin-Hyuk Jang*/
+/*		if (set_num_free_blocks(0) >= sectors)
 		{
 			disk_write(filesys_disk, sector, disk_inode);
 			if (sectors > 0)
@@ -128,8 +164,9 @@ bool inode_create(disk_sector_t sector, off_t length)
 				}
 			}
 			free(disk_inode);
-		}
-		/*by Jin-Hyuk Jang*/
+		}*/
+/*by Jin-Hyuk Jang*/
+#endif
 		free(disk_inode);
 	}
 	return success;
@@ -205,12 +242,12 @@ void inode_close(struct inode *inode)
 		/* Deallocate blocks if removed. */
 		if (inode->removed)
 		{
-			// free_map_release(inode->sector, 1);
-			// free_map_release(inode->data.start,
-			// 				 bytes_to_sectors(inode->data.length));
+			free_map_release(inode->sector, 1);
+			free_map_release(inode->data.start,
+							 bytes_to_sectors(inode->data.length));
 
-			fat_remove_chain(inode->sector, 0);
-			fat_remove_chain(inode->data.start, 0);
+			/*fat_remove_chain(inode->sector, 0);
+			fat_remove_chain(inode->data.start, 0);*/
 		}
 
 		free(inode);
