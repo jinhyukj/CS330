@@ -1,0 +1,10 @@
+FAIL
+Kernel panic in run: PANIC at ../../filesys/inode.c:84 in inode_create(): assertion `sizeof *disk_inode == DISK_SECTOR_SIZE' failed.
+Call stack: 0x800421464c 0x800421d505 0x800421cc62 0x800421b704 0x800421aef6 0x8004206151
+Translation of call stack:
+0x000000800421464c: debug_panic (lib/kernel/debug.c:32)
+0x000000800421d505: inode_open (filesys/inode.c:176)
+0x000000800421cc62: dir_create (filesys/directory.c:40)
+0x000000800421b704: do_format (filesys/filesys.c:295)
+0x000000800421aef6: filesys_init (filesys/filesys.c:34)
+0x0000008004206151: main (threads/init.c:118)

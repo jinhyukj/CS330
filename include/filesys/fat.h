@@ -35,4 +35,13 @@ cluster_t fat_get (cluster_t clst);
 void fat_put (cluster_t clst, cluster_t val);
 disk_sector_t cluster_to_sector (cluster_t clst);
 
+
+/* Edited Code - Jinhyen Kim */
+
+cluster_t sector_to_cluster (disk_sector_t sector);
+
+void init_fat_bitmap(void);
+
+/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 #endif /* filesys/fat.h */

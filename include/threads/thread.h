@@ -252,6 +252,14 @@ struct thread
 
 #endif
 
+	/* Edited Code - Jinhyen Kim */
+
+#ifdef EFILESYS
+	struct dir *currentDirectory;
+#endif
+
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 	/* Owned by thread.c. */
 	struct intr_frame tf; /* Information for switching */
 	unsigned magic;		  /* Detects stack overflow. */

@@ -23,6 +23,9 @@
 #ifdef VM
 #include "vm/vm.h"
 #endif
+#ifdef EFILESYS
+#include "filesys/directory.h"
+#endif
 
 static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
@@ -264,7 +267,16 @@ __do_fork (void *aux) {
 	if_.R.rax = 0 ;
 
 	(*(thread_current())).fdIndex = parent->fdIndex;
+
+
+	/* Edited Code - Jinhyen Kim */
+
+	ASSERT((*(parent)).currentDirectory != NULL);
+	(*(thread_current())).currentDirectory = dir_reopen((*(parent)).currentDirectory);	
+
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 	
+
 	/* Finally, switch to the newly created process. */
 
 	sema_up(&((*(thread_current())).forkLock));
@@ -455,6 +467,14 @@ process_exit (void) {
 	palloc_free_multiple((*(thread_current())).fdTable, 3); 
 	file_close((*(thread_current())).threadFile);
 	process_cleanup ();
+
+	/* Edited Code - Jinhyen Kim */
+
+#ifdef EFILESYS
+	dir_close((*(thread_current())).currentDirectory);
+#endif
+
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 
 	sema_up(&((*(thread_current())).waitLock));
 	sema_down(&((*(thread_current())).removeLock));

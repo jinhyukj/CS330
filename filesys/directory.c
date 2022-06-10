@@ -5,25 +5,38 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/thread.h"
+#include "filesys/fat.h"
 
-/* A directory. */
-struct dir {
-	struct inode *inode;                /* Backing store. */
-	off_t pos;                          /* Current position. */
-};
+/* Edited Code - Jinhyen Kim */
 
-/* A single directory entry. */
-struct dir_entry {
-	disk_sector_t inode_sector;         /* Sector number of header. */
-	char name[NAME_MAX + 1];            /* Null terminated file name. */
-	bool in_use;                        /* In use or free? */
-};
+struct dir *current_directory(){
+	return thread_current()->currentDirectory;
+}
+
+void setDirectory(struct dir *dir){
+	thread_current()->currentDirectory = dir;
+}
+
+struct dir *getSubdirectory(char ** dirnames, int dircount){
+	return;
+}
+
+void set_entry_symlink(struct dir* dir, const char *name, bool issym){
+	return;
+}
+
+void set_entry_lazytar(struct dir* dir, const char *name, const char *tar){
+	return;
+}
+
+/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 
 /* Creates a directory with space for ENTRY_CNT entries in the
  * given SECTOR.  Returns true if successful, false on failure. */
 bool
 dir_create (disk_sector_t sector, size_t entry_cnt) {
-	return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+	return inode_create (sector, entry_cnt * sizeof (struct dir_entry), true);
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -76,9 +89,8 @@ dir_get_inode (struct dir *dir) {
  * if EP is non-null, and sets *OFSP to the byte offset of the
  * directory entry if OFSP is non-null.
  * otherwise, returns false and ignores EP and OFSP. */
-static bool
-lookup (const struct dir *dir, const char *name,
-		struct dir_entry *ep, off_t *ofsp) {
+bool
+lookup (const struct dir *dir, const char *name, struct dir_entry *ep, off_t *ofsp) {
 	struct dir_entry e;
 	size_t ofs;
 

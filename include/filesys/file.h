@@ -2,8 +2,20 @@
 #define FILESYS_FILE_H
 
 #include "filesys/off_t.h"
+#include "lib/stdbool.h"
 
 struct inode;
+
+/* Edited Code - Jinhyen Kim */
+
+struct file {
+	struct inode *inode; 
+	off_t pos;
+	bool denyWrite; 
+	int dupNo;
+};
+
+/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 
 /* Opening and closing files. */
 struct file *file_open (struct inode *);

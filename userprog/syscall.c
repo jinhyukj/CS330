@@ -18,6 +18,9 @@
 #include "threads/synch.h"
 #include "vm/vm.h"
 #include "vm/file.h"
+#include "filesys/directory.h"
+#include "filesys/fat.h"
+#include "filesys/inode.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -551,6 +554,209 @@ void munmap (void *addr) {
 
 /* Edited Code - Jinhyen Kim (Project 3 - Memory Mapped Files) */
 
+/* Edited Code - Jinhyen Kim */
+
+bool chdir (const char *targetDirectory) {
+
+	struct path* targetPath = parsePath(targetDirectory);
+	struct dir* subDir = getSubdirectory((*(targetPath)).dirList, (*(targetPath)).dirLevel);
+
+	if ((((*(targetPath)).dirLevel) == -1) || (subDir == NULL)) 
+	{
+		dir_close(subDir);
+		freePath(targetPath);
+		return false;
+	}
+
+	if (!(strcmp((*(targetPath)).file, "root")))
+	{
+		setDirectory(dir_open_root());
+	}
+	else
+	{
+		struct inode *inode = NULL; 
+		dir_lookup(subDir, (*(targetPath)).file, &inode);
+
+		if (inode != NULL) 
+		{
+			setDirectory(dir_open(inode));			
+		}
+		else
+		{
+			return false;
+		}
+	} 
+
+	dir_close(subDir);
+	freePath(targetPath);
+	return true;
+
+}
+
+
+
+bool mkdir (const char *directory){
+
+	if (strlen(directory) == 0)
+	{
+		return false;
+	}
+
+	struct path* targetPath = parsePath(directory);
+
+	if ((*(targetPath)).dirLevel == -1) 
+	{
+		return false;
+	}
+
+	struct dir* subDir = getSubdirectory((*(targetPath)).dirList, (*(targetPath)).dirLevel);
+	cluster_t cluster = fat_create_chain(0);
+
+	if ((subDir == NULL) || (cluster == 0)) 
+	{
+		dir_close(subDir); 
+		freePath(targetPath);
+		return false;
+	}
+
+	disk_sector_t sector = cluster_to_sector(cluster);
+
+	dir_create(sector, DISK_SECTOR_SIZE/sizeof(struct dir_entry));
+
+	struct dir *targetDir = dir_open(inode_open(sector));
+	dir_add(targetDir, ".", sector);
+	dir_add(targetDir, "..", inode_get_inumber(dir_get_inode(subDir)));
+	dir_close(targetDir);
+
+	bool success = dir_add(subDir, (*(targetPath)).file, cluster_to_sector(cluster));
+
+	dir_close(subDir);
+	freePath(targetPath);
+	return success;
+
+}
+
+
+
+bool readdir (int fd, char* name) {
+
+	if (fd < 0 || fd >= 1536)
+		return false;
+
+	struct file *targetFile = (*(thread_current())).fdTable[fd];
+
+	if (targetFile == NULL)
+		return false;
+
+	if (checkInodeDir((*(targetFile)).inode))
+	{
+		return dir_readdir((struct dir *)targetFile, name);
+	}
+	else 
+	{
+		return false;
+	}
+}
+
+
+bool isdir (int fd) {
+
+	if (fd < 0 || fd >= 1536)
+		return false;
+
+	struct file *targetFile = (*(thread_current())).fdTable[fd];
+
+	if (targetFile == NULL)
+		return false;
+
+	return checkInodeDir((*(targetFile)).inode);
+
+}
+
+
+
+
+int inumber (int fd) {
+
+	if (fd < 0 || fd >= 1536)
+		//return false;
+		return 0;
+
+	struct file *targetFile = (*(thread_current())).fdTable[fd];
+
+	if (targetFile == NULL)
+		//return false;
+		return 0;
+
+	return (*((*(targetFile)).inode)).sector;
+}
+
+
+
+
+int
+symlink (const char* target, const char* linkpath) {
+
+	struct path* pathLink = parsePath(linkpath);
+	struct dir* subDirLink = getSubdirectory((*(pathLink)).dirList, (*(pathLink)).dirLevel);
+
+	if (((*(pathLink)).dirLevel == -1) || (subDirLink == NULL)) 
+	{
+		dir_close(subDirLink);
+		freePath(pathLink);
+		return -1;
+	}
+
+	struct path* pathTarget = parsePath(target);
+	struct dir* subDirTarget = getSubdirectory((*(pathTarget)).dirList, (*(pathTarget)).dirLevel);
+	
+	if (((*(pathTarget)).dirLevel==-1) || (subDirTarget == NULL)) 
+	{
+		dir_close(subDirTarget);
+		freePath(pathTarget);
+		return -1;
+	}
+
+	struct inode* inode = NULL;
+	dir_lookup(subDirTarget, (*(pathTarget)).file, &inode);
+
+	if (inode == NULL) 
+	{
+		inode = dir_get_inode(subDirTarget);
+
+		dir_add(subDirLink, (*(pathLink)).file, inode_get_inumber(inode));
+		set_entry_symlink(subDirLink, (*(pathLink)).file, true);
+
+		set_entry_lazytar(subDirLink, (*(pathLink)).file, (*(pathTarget)).file);
+	}
+	else
+	{
+		dir_add(subDirLink, (*(pathLink)).file, inode_get_inumber(inode));
+		set_entry_symlink(subDirLink, (*(pathLink)).file, true);
+
+		struct dir_entry target_entry;
+		off_t ofs;
+		lookup(subDirTarget, (*(pathTarget)).file, &target_entry, &ofs);
+
+		if (strcmp("lazy", target_entry.lazy))
+		{
+			set_entry_lazytar(subDirLink, (*(pathLink)).file, target_entry.lazy);
+		}
+	}
+
+	dir_close(subDirLink);
+	freePath(pathLink);
+	dir_close(subDirTarget);
+	freePath(pathTarget);
+
+	return 0;
+
+}
+
+
+/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
+
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 
@@ -676,6 +882,40 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			break;
 
 		/* Edited Code - Jinhyen Kim (Project 3 - Memory Mapped Files) */
+
+		/* Edited Code - Jinhyen Kim */
+
+		case SYS_CHDIR:
+
+			(((*(f)).R).rax) = chdir((((*(f)).R).rdi));
+			break;
+
+		case SYS_MKDIR:
+
+			(((*(f)).R).rax) = mkdir((((*(f)).R).rdi));
+			break;
+
+		case SYS_READDIR:
+
+			(((*(f)).R).rax) = readdir((((*(f)).R).rdi), (((*(f)).R).rsi));
+			break;
+
+		case SYS_ISDIR:
+
+			(((*(f)).R).rax) = isdir((((*(f)).R).rdi));
+			break;
+
+		case SYS_INUMBER:
+
+			(((*(f)).R).rax) = inumber((((*(f)).R).rdi));
+			break;
+
+		case SYS_SYMLINK:
+
+			(((*(f)).R).rax) = symlink((((*(f)).R).rdi), (((*(f)).R).rsi));
+			break;
+
+		/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 
 		default:
 
