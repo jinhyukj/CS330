@@ -725,22 +725,22 @@ symlink (const char* target, const char* linkpath) {
 		inode = dir_get_inode(subDirTarget);
 
 		dir_add(subDirLink, (*(pathLink)).file, inode_get_inumber(inode));
-		set_entry_symlink(subDirLink, (*(pathLink)).file, true);
+		setIsSymFlag(subDirLink, (*(pathLink)).file, true);
 
-		set_entry_lazytar(subDirLink, (*(pathLink)).file, (*(pathTarget)).file);
+		setSymInfo(subDirLink, (*(pathLink)).file, (*(pathTarget)).file);
 	}
 	else
 	{
 		dir_add(subDirLink, (*(pathLink)).file, inode_get_inumber(inode));
-		set_entry_symlink(subDirLink, (*(pathLink)).file, true);
+		setIsSymFlag(subDirLink, (*(pathLink)).file, true);
 
 		struct dir_entry target_entry;
 		off_t ofs;
 		lookup(subDirTarget, (*(pathTarget)).file, &target_entry, &ofs);
 
-		if (strcmp("lazy", target_entry.lazy))
+		if (strcmp("lazy", target_entry.lazyName))
 		{
-			set_entry_lazytar(subDirLink, (*(pathLink)).file, target_entry.lazy);
+			setSymInfo(subDirLink, (*(pathLink)).file, target_entry.lazyName);
 		}
 	}
 

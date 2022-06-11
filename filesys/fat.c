@@ -36,8 +36,17 @@ void fat_fs_init(void);
 
 /* Edited Code - Jinhyen Kim */
 
-void init_fat_bitmap(void) {
-	return;
+struct bitmap *fatBitmap;
+
+void initFatBitmap(void) {
+
+	for(int i = 0; i < (*(fat_fs)).fat_length; i++){
+
+		if(((*(fat_fs)).fat[i]) != 0)
+			bitmap_set(fatBitmap, i, true);
+
+	}
+
 }
 
 /* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
@@ -62,6 +71,11 @@ void fat_init(void)
 	if (fat_fs->bs.magic != FAT_MAGIC)
 		fat_boot_create();
 	fat_fs_init();
+
+	/* Edited Code - Jinhyen Kim */
+	fatBitmap = bitmap_create((*(fat_fs)).fat_length); 
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 }
 
 void fat_open(void)
@@ -174,8 +188,8 @@ void fat_fs_init(void)
 {
 	/* TODO: Your code goes here. */
 	fat_fs->fat = NULL;
-	fat_fs->fat_length = fat_fs->bs.fat_sectors * DISK_SECTOR_SIZE / (sizeof(cluster_t)); // in number of cluster_t's(or cluster numbers)
-	fat_fs->data_start = fat_fs->bs.fat_start + fat_fs->bs.fat_sectors;					  // in sectors
+	fat_fs->fat_length = fat_fs->bs.fat_sectors * DISK_SECTOR_SIZE / (sizeof(cluster_t));
+	fat_fs->data_start = fat_fs->bs.fat_start + fat_fs->bs.fat_sectors;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -239,7 +253,15 @@ void fat_remove_chain(cluster_t clst, cluster_t pclst)
 void fat_put(cluster_t clst, cluster_t val)
 {
 	/* TODO: Your code goes here. */
-	fat_fs->fat[clst] = val;
+	//fat_fs->fat[clst] = val;
+
+	if (!bitmap_test(fatBitmap, clst - 1)) 
+	{
+		bitmap_mark(fatBitmap, clst - 1);
+	}
+	(*(fat_fs)).fat[clst - 1] = val;
+	//fat_fs->fat[clst] = val;
+
 }
 
 /* Fetch a value in the FAT table. */
@@ -247,7 +269,15 @@ cluster_t
 fat_get(cluster_t clst)
 {
 	/* TODO: Your code goes here. */
-	return fat_fs->fat[clst];
+	//return fat_fs->fat[clst];
+
+	if (clst > (*(fat_fs)).fat_length || !bitmap_test(fatBitmap, clst - 1))
+	{
+		return 0; 
+	}
+	return (*(fat_fs)).fat[clst - 1];
+	//return fat_fs->fat[clst];
+
 }
 
 /* Covert a cluster # to a sector number. */
@@ -255,7 +285,11 @@ disk_sector_t
 cluster_to_sector(cluster_t clst)
 {
 	/* TODO: Your code goes here. */
-	return fat_fs->data_start + clst - 1;
+	//return fat_fs->data_start + clst - 1;
+
+	return (*(fat_fs)).data_start + (clst - 1) * SECTORS_PER_CLUSTER;
+
+	//return fat_fs->data_start + clst - 1;
 }
 
 cluster_t sector_to_cluster(disk_sector_t sector)

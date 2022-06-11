@@ -9,4 +9,4 @@ filesys/filesys.o: ../../filesys/filesys.c \
  ../../include/lib/stdbool.h ../../include/filesys/free-map.h \
  ../../include/devices/disk.h ../../include/lib/inttypes.h \
  ../../include/filesys/inode.h ../../include/filesys/directory.h \
- ../../include/filesys/fat.h
+ ../../include/filesys/fat.h ../../include/lib/kernel/bitmap.h

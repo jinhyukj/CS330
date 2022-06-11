@@ -4,12 +4,12 @@ Kernel command line: -q -threads-tests -f run priority-donate-sema
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  52,428,800 loops/s.
-hd0:0: detected 345 sector (172 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+Calibrating timer...  52,377,600 loops/s.
+hd0:0: detected 353 sector (176 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:1: detected 8,064 sector (3 MB) disk, model "QEMU HARDDISK", serial "QM00004"
-Formatting file system...Kernel PANIC at ../../filesys/inode.c:84 in inode_create(): assertion `sizeof *disk_inode == DISK_SECTOR_SIZE' failed.
-Call stack: 0x800421464c 0x800421d505 0x800421cc62 0x800421b704 0x800421aef6 0x8004206151.
+Formatting file system...Kernel PANIC at ../../filesys/inode.c:86 in inode_create(): assertion `sizeof *disk_inode == DISK_SECTOR_SIZE' failed.
+Call stack: 0x800421466f 0x800421dbde 0x800421cd8c 0x800421b757 0x800421af49 0x8004206152.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.

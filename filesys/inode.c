@@ -6,7 +6,9 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#ifdef EFILESYS
 #include "filesys/fat.h"
+#endif
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -335,19 +337,89 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size,
 	if (inode->deny_write_cnt)
 		return 0;
 
+
+	/* Edited Code - Jinhyen Kim */
+
+	bool extendedFlag = false; 
+	uint8_t zeroPadding[DISK_SECTOR_SIZE];
+
 	while (size > 0)
 	{
+
+		#ifdef EFILESYS
+		disk_sector_t sector_idx = byte_to_sector(inode, offset + size);
+		while (sector_idx == -1)
+		{
+			
+			off_t inodeLength = inode_length(inode);
+
+			cluster_t endCluster = sector_to_cluster(byte_to_sector(inode, inodeLength - 1));
+			cluster_t newCluster;
+
+			if (inodeLength == 0)
+			{
+				newCluster = endCluster;
+			}
+			else 
+			{
+				newCluster = fat_create_chain(endCluster);
+			}
+
+			extendedFlag = true;
+
+			if (newCluster != 0) 
+			{
+
+				memset (zeroPadding, 0, DISK_SECTOR_SIZE);
+				disk_write (filesys_disk, cluster_to_sector(newCluster), zeroPadding); 
+
+				off_t inodeOffset = inodeLength % DISK_SECTOR_SIZE;
+				if(inodeOffset != 0)
+				{
+					((*(inode)).data).length = ((*(inode)).data).length +  DISK_SECTOR_SIZE - inodeOffset; 
+					disk_read (filesys_disk, cluster_to_sector(endCluster), zeroPadding);
+					memset (zeroPadding + inodeOffset + 1 , 0, DISK_SECTOR_SIZE - inodeOffset);
+					disk_write (filesys_disk, cluster_to_sector(endCluster), zeroPadding); 
+				}
+
+				((*(inode)).data).length = ((*(inode)).data).length + DISK_SECTOR_SIZE; 
+				sector_idx = byte_to_sector(inode, offset + size);
+			}
+			
+		}		
+		#endif
+
+
 		/* Sector to write, starting byte offset within sector. */
-		disk_sector_t sector_idx = byte_to_sector(inode, offset);
+		sector_idx = byte_to_sector(inode, offset);
 		int sector_ofs = offset % DISK_SECTOR_SIZE;
 
 		/* Bytes left in inode, bytes left in sector, lesser of the two. */
 		off_t inode_left = inode_length(inode) - offset;
 		int sector_left = DISK_SECTOR_SIZE - sector_ofs;
-		int min_left = inode_left < sector_left ? inode_left : sector_left;
+		int min_left;
+		if (inode_left < sector_left)
+		{
+			min_left = inode_left;
+		}
+		else
+		{
+			min_left = sector_left;
+		}
 
 		/* Number of bytes to actually write into this sector. */
-		int chunk_size = size < min_left ? size : min_left;
+		int chunk_size;
+
+
+		if (size < min_left)
+		{
+			chunk_size = size;
+		}
+		else
+		{
+			chunk_size = min_left;
+		} 
+
 		if (chunk_size <= 0)
 			break;
 
@@ -381,10 +453,22 @@ off_t inode_write_at(struct inode *inode, const void *buffer_, off_t size,
 		size -= chunk_size;
 		offset += chunk_size;
 		bytes_written += chunk_size;
+
+		sector_idx = byte_to_sector (inode, offset);
 	}
+
+	if (extendedFlag == true)
+	{
+		((*(inode)).data).length = offset;
+	}
+
 	free(bounce);
+	disk_write (filesys_disk, inode->sector, &inode->data); 
 
 	return bytes_written;
+
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 }
 
 /* Disables writes to INODE.

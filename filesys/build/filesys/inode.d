@@ -7,4 +7,4 @@ filesys/inode.o: ../../filesys/inode.c ../../include/filesys/inode.h \
  ../../include/filesys/filesys.h ../../include/threads/synch.h \
  ../../include/threads/malloc.h ../../include/filesys/free-map.h \
  ../../include/filesys/fat.h ../../include/filesys/file.h \
- ../../include/lib/stdbool.h
+ ../../include/lib/stdbool.h ../../include/lib/kernel/bitmap.h

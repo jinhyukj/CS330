@@ -3,6 +3,7 @@
 
 #include "devices/disk.h"
 #include "filesys/file.h"
+#include "kernel/bitmap.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -40,7 +41,7 @@ disk_sector_t cluster_to_sector (cluster_t clst);
 
 cluster_t sector_to_cluster (disk_sector_t sector);
 
-void init_fat_bitmap(void);
+void initFatBitmap(void);
 
 /* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 

@@ -18,4 +18,5 @@ userprog/syscall.o: ../../userprog/syscall.c \
  ../../include/threads/malloc.h ../../include/lib/kernel/stdio.h \
  ../../include/userprog/process.h ../../include/filesys/directory.h \
  ../../include/devices/disk.h ../../include/lib/inttypes.h \
- ../../include/filesys/fat.h ../../include/filesys/inode.h
+ ../../include/filesys/fat.h ../../include/lib/kernel/bitmap.h \
+ ../../include/filesys/inode.h

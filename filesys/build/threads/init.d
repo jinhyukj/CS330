@@ -23,4 +23,5 @@ threads/init.o: ../../threads/init.c ../../include/threads/init.h \
  ../../include/userprog/syscall.h ../../include/userprog/tss.h \
  ../../tests/threads/tests.h ../../include/devices/disk.h \
  ../../include/lib/inttypes.h ../../include/filesys/filesys.h \
- ../../include/filesys/fsutil.h
+ ../../include/filesys/fsutil.h ../../include/filesys/directory.h \
+ ../../include/filesys/fat.h ../../include/lib/kernel/bitmap.h

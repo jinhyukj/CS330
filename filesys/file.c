@@ -14,6 +14,9 @@ file_open (struct inode *inode) {
 		file->inode = inode;
 		file->pos = 0;
 		file->denyWrite = false;
+
+		file->dupNo = 0;
+
 		return file;
 	} else {
 		inode_close (inode);

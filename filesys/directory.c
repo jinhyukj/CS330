@@ -8,29 +8,6 @@
 #include "threads/thread.h"
 #include "filesys/fat.h"
 
-/* Edited Code - Jinhyen Kim */
-
-struct dir *current_directory(){
-	return thread_current()->currentDirectory;
-}
-
-void setDirectory(struct dir *dir){
-	thread_current()->currentDirectory = dir;
-}
-
-struct dir *getSubdirectory(char ** dirnames, int dircount){
-	return;
-}
-
-void set_entry_symlink(struct dir* dir, const char *name, bool issym){
-	return;
-}
-
-void set_entry_lazytar(struct dir* dir, const char *name, const char *tar){
-	return;
-}
-
-/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 
 /* Creates a directory with space for ENTRY_CNT entries in the
  * given SECTOR.  Returns true if successful, false on failure. */
@@ -47,6 +24,12 @@ dir_open (struct inode *inode) {
 	if (inode != NULL && dir != NULL) {
 		dir->inode = inode;
 		dir->pos = 0;
+
+		/* Edited Code - Jinhyen Kim */
+		(*(dir)).denyWrite = false;
+		(*(dir)).dupNo = 0;
+		/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 		return dir;
 	} else {
 		inode_close (inode);
@@ -59,7 +42,11 @@ dir_open (struct inode *inode) {
  * Return true if successful, false on failure. */
 struct dir *
 dir_open_root (void) {
-	return dir_open (inode_open (ROOT_DIR_SECTOR));
+	
+	/* Edited Code - Jinhyen Kim */
+	return dir_open (inode_open (cluster_to_sector(ROOT_DIR_SECTOR)));
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 }
 
 /* Opens and returns a new directory for the same inode as DIR.
@@ -114,19 +101,45 @@ lookup (const struct dir *dir, const char *name, struct dir_entry *ep, off_t *of
  * On success, sets *INODE to an inode for the file, otherwise to
  * a null pointer.  The caller must close *INODE. */
 bool
-dir_lookup (const struct dir *dir, const char *name,
-		struct inode **inode) {
+dir_lookup (const struct dir *dir, const char *name, struct inode **inode) 
+{
 	struct dir_entry e;
 
 	ASSERT (dir != NULL);
 	ASSERT (name != NULL);
 
-	if (lookup (dir, name, &e, NULL))
-		*inode = inode_open (e.inode_sector);
-	else
-		*inode = NULL;
+	/* Edited Code - Jinhyen Kim */
 
-	return *inode != NULL;
+	if (lookup (dir, name, &e, NULL)) 
+	{
+
+		if (strcmp("lazy", e.lazyName))
+		{
+			dir_lookup(dir_open(inode_open(e.inode_sector)), e.lazyName, inode);
+
+			if (*inode != NULL)
+			{
+				e.inode_sector = inode_get_inumber(*inode);
+				strlcpy (e.lazyName, "lazy", sizeof e.lazyName);
+				return *inode != NULL;
+			}
+			else
+			{
+				*inode = inode_open (e.inode_sector);
+				return *inode != NULL;	
+			}
+
+		}
+		*inode = inode_open (e.inode_sector);
+		return *inode != NULL;
+
+	}
+	else
+	{
+		return false;
+	}
+
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
 }
 
 /* Adds a file named NAME to DIR, which must not already contain a
@@ -167,6 +180,12 @@ dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector) {
 	/* Write slot. */
 	e.in_use = true;
 	strlcpy (e.name, name, sizeof e.name);
+
+	/* Edited Code - Jinhyen Kim */
+	e.symBool = false;
+	strlcpy (e.lazyName, "lazy", sizeof e.lazyName);
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+	
 	e.inode_sector = inode_sector;
 	success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
 
@@ -181,7 +200,6 @@ bool
 dir_remove (struct dir *dir, const char *name) {
 	struct dir_entry e;
 	struct inode *inode = NULL;
-	bool success = false;
 	off_t ofs;
 
 	ASSERT (dir != NULL);
@@ -189,25 +207,58 @@ dir_remove (struct dir *dir, const char *name) {
 
 	/* Find directory entry. */
 	if (!lookup (dir, name, &e, &ofs))
-		goto done;
+	{
+		inode_close (inode);
+		return false;
+	}
 
 	/* Open inode. */
 	inode = inode_open (e.inode_sector);
-	if (inode == NULL)
-		goto done;
+	if (inode == NULL) 
+	{
+		inode_close (inode);
+		return false;
+	}
+
+	/* Edited Code - Jinhyen Kim */
+
+	if (e.symBool) 
+	{
+		e.in_use = false;
+		return (inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e);
+	}
+
+	if (checkInodeDir(inode))
+	{
+		char temp[NAME_MAX + 1];
+
+		struct dir *inodeTemp = dir_open(inode);
+
+		if (dir_readdir(inodeTemp, temp))
+		{ 
+			(*(dir)).pos = (*(dir)).pos - sizeof(struct dir_entry);
+			dir_close(inodeTemp);
+			inode_close(inode);
+			return false;
+		}
+		dir_close(inodeTemp);
+	}
 
 	/* Erase directory entry. */
 	e.in_use = false;
-	if (inode_write_at (dir->inode, &e, sizeof e, ofs) != sizeof e)
-		goto done;
-
+	if (inode_write_at (dir->inode, &e, sizeof e, ofs) != sizeof e) 
+	{
+		inode_close(inode);
+		return false;
+	}
+	
 	/* Remove inode. */
 	inode_remove (inode);
-	success = true;
-
-done:
 	inode_close (inode);
-	return success;
+	return true;
+
+	/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 }
 
 /* Reads the next directory entry in DIR and stores the name in
@@ -219,10 +270,103 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1]) {
 
 	while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) {
 		dir->pos += sizeof e;
-		if (e.in_use) {
+
+		/* Edited Code - Jinhyen Kim */
+
+		if ((e.in_use) && (strcmp(e.name, ".") && strcmp(e.name,".."))) 
+		{
 			strlcpy (name, e.name, NAME_MAX + 1);
 			return true;
 		}
+
+		/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */
+
 	}
 	return false;
 }
+
+
+/* Edited Code - Jinhyen Kim */
+
+struct dir *getDirectory()
+{
+	return (*(thread_current())).currentDirectory;
+}
+
+void setDirectory(struct dir *dir)
+{
+	(*(thread_current())).currentDirectory = dir;
+}
+
+struct dir *getSubdirectory(char **dirList, int dirLevel)
+{
+
+	if ((getDirectory()) == NULL) 
+	{
+		return NULL;
+	}
+
+	struct dir *subDir = dir_reopen(getDirectory());
+
+	struct inode *inode = NULL;
+
+	for (int i = 0; i < dirLevel; i++)
+	{
+
+		struct dir *prevDir = subDir;
+
+		if (i == 0 && (strcmp(dirList[i],"root") == 0))
+		{ 
+			subDir = dir_open_root();
+			dir_close(prevDir);
+			continue;
+		}
+		else {
+
+			dir_lookup(prevDir, dirList[i], &inode);
+		
+			if (inode == NULL)
+			{	
+				return NULL;
+			}
+		
+			subDir = dir_open(inode);
+			dir_close(prevDir);
+
+		}
+	}
+
+	return subDir;
+}
+
+void setIsSymFlag(struct dir* dir, const char *name, bool symBool){
+
+	struct dir_entry dirEntry;
+	off_t ofs;
+
+	for (ofs = 0; inode_read_at ((*(dir)).inode, &dirEntry, sizeof dirEntry, ofs) == sizeof dirEntry; ofs += sizeof dirEntry){
+		if (dirEntry.in_use && !strcmp (name, dirEntry.name)){
+			break;
+		}
+	}
+	dirEntry.symBool = symBool;
+	inode_write_at (dir->inode, &dirEntry, sizeof dirEntry, ofs) == sizeof dirEntry;
+
+}
+
+void setSymInfo(struct dir* dir, const char *name, const char *target){
+
+	struct dir_entry dirEntry;
+	off_t ofs;
+
+	for (ofs = 0; inode_read_at ((*(dir)).inode, &dirEntry, sizeof dirEntry, ofs) == sizeof dirEntry; ofs += sizeof dirEntry){
+		if (dirEntry.in_use && !strcmp (name, dirEntry.name)){
+			break;
+		}
+	}
+	strlcpy(dirEntry.lazyName, target, sizeof dirEntry.lazyName);
+	inode_write_at ((*(dir)).inode, &dirEntry, sizeof dirEntry, ofs) == sizeof dirEntry;
+
+}
+
+/* Edited Code - Jinhyen Kim (Project 4 - Subdirectories and Soft Links) */

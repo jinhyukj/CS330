@@ -22,24 +22,24 @@ struct inode;
 struct dir {
 	struct inode *inode; 
 	off_t pos;  
-    	bool deny_write; 
-   	int dupCount; 
+    	bool denyWrite; 
+   	int dupNo; 
 };
 
 struct dir_entry {
 	disk_sector_t inode_sector;     
 	char name[NAME_MAX + 1];    
 	bool in_use;   
-	bool is_sym;
-	char lazy[NAME_MAX + 1];
+	bool symBool;
+	char lazyName[NAME_MAX + 1];
 };
 
-// Project 4-2 
-struct dir *getSubdirectory(char ** dirnames, int dircount);
-struct dir *current_directory();
+struct dir *getDirectory();
 void setDirectory(struct dir *dir);
-void set_entry_symlink(struct dir*, const char *name, bool);
-void set_entry_lazytar(struct dir*, const char *name, const char *tar);
+struct dir *getSubdirectory(char ** dirnames, int dircount);
+
+void setIsSymFlag(struct dir* dir, const char *name, bool symBool);
+void setSymInfo(struct dir* dir, const char *name, const char *target);
 
 bool lookup (const struct dir *dir, const char *name, struct dir_entry *ep, off_t *ofsp);
 

@@ -32,7 +32,7 @@ void filesys_init(bool format)
 		do_format();
 
 	fat_open();
-	init_fat_bitmap();
+	initFatBitmap();
 #else
 	/* Original FS */
 	free_map_init();
@@ -263,9 +263,9 @@ bool filesys_remove(const char *name)
 		return false;
 	}
 
-	struct dir *cwd = current_directory();
+	struct dir *curDir = getDirectory();
 
-	if((*(cwd)).inode == inode)
+	if((*(curDir)).inode == inode)
 		setDirectory(NULL); 
 
 	bool success = ((dir != NULL) && (dir_remove (dir, (*(path)).file)));
